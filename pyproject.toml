@@ -1,0 +1,23 @@
+[project]
+name = "TB_incubator"
+version = "0.1.0"
+dependencies = [
+    "summerepi2",
+    "estival",
+    "ipykernel",
+    "ipywidgets",
+    "nbformat"
+]
+
+[tool.setuptools]
+packages = ["TB_incubator"]
+
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.package-data]
+"TB_incubator.data" = ["data/**/*.csv", "data/**/*.json"]
+
+[tool.black]
+line-length = 100

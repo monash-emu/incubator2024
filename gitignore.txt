@@ -1,0 +1,9 @@
+.DS_Store
+*.pyc
+*.pdf
+*.aux
+*.log
+*.tex
+*.svg
+*/*_files/
+*/.ipynb_checkpoints/*
