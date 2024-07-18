@@ -3,7 +3,7 @@ name = "TB_incubator"
 version = "0.1.0"
 dependencies = [
     "summerepi2",
-    "estival",
+    "estival[nevergrad,pymc]",
     "ipykernel",
     "ipywidgets",
     "nbformat"
