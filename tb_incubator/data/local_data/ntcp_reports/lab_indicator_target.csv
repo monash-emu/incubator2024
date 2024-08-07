@@ -1,9 +1,0 @@
-﻿indicator,baseline_2018,target_2020,target_2021,target_2022,target_2023,target_2024
-% Microscopic laboratory participating in EQA,42,70,75,80,85,90
-TB culture reference lab,21,28,34,38,42,46
-TB sensitivity reference lab,12,16,20,22,24,24
-Healthcare provider with GeneXpert,834,1244,1744,2107,2107,2107
-GeneXpert units needed,860,1296,1796,2133,2133,2133
-Healthcare provider for DR-TB with XDR module,0,0,89,134,360,549
-Regency/town with specimens transport systems,203,292,344,420,514,514
-% Coverage target for universal sensitivity test,20,65,65,70,70,75
