@@ -1,0 +1,26 @@
+provider,year,notification,treated,notif_treated
+Private clinic,2021,3667,2987,0
+Public clinic,2021,1232,1175,0
+Private hospital,2021,94642,73736,0
+Public hospital,2021,113774,70277,0
+Community health center,2021,22992,249911,0
+Private clinic,2022,9298,7406,0
+Public clinic,2022,2354,2145,0
+Private hospital,2022,189527,143935,0
+Public hospital,2022,209079,125145,0
+Community health center,2022,314051,347502,0
+Private clinic,2016,0,0,91
+Private clinic,2017,0,0,114
+Private clinic,2018,0,0,111
+Private clinic,2019,0,0,262
+Private clinic,2020,0,0,179
+Private hospital,2016,0,0,491
+Private hospital,2017,0,0,637
+Private hospital,2018,0,0,934
+Private hospital,2019,0,0,934
+Private hospital,2020,0,0,973
+Public hospital,2016,0,0,582
+Public hospital,2017,0,0,642
+Public hospital,2018,0,0,707
+Public hospital,2019,0,0,701
+Public hospital,2020,0,0,692
