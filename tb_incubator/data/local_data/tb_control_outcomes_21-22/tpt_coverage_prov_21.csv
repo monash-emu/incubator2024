@@ -1,0 +1,36 @@
+region_province,perc_tpt_rec_u5yo,perc_tpt_rec_5_14,perc_tpt_rec_m15yo,perc_tpt_rec_hc,perc_tpt_rec_rg,perc_tpt_rec_hiv
+Aceh,0,0,0,0,0,14.5
+Sumatera Utara,0.6,0,0,0.1,0.1,4.7
+Sumatera Barat,3.1,0.3,0,0.3,0.4,8
+Riau,0.6,0,0,0.1,0,3.3
+Kepulauan Riau,1.3,0.1,0,0.1,0.7,13.8
+Jambi,0.6,0.1,0,0.1,0.2,13.7
+Sumatera Selatan,1.2,0.1,0,0.1,0,2.9
+Bangka Belitung,2.2,0.1,0,0.2,0,4.6
+Bengkulu,3.4,0,0,0.3,0,0
+Lampung,0.9,0,0,0.1,0.1,21.2
+Banten,1.5,0.1,0,0.1,0.1,7.5
+DKI Jakarta,4.8,1.6,0.7,1.3,0.8,2.7
+Jawa Barat,0.8,0.1,0,0.1,0.1,4.5
+Jawa Tengah,3.4,0.2,0,0.3,0.4,3.3
+DI Yogyakarta,3.9,1.1,2,2,2.3,4.6
+Jawa Timur,3.1,0.2,0,0.3,0.1,6.6
+Kalimantan Barat,0.1,0,0,0,0,1.8
+Kalimantan Tengah,1.4,0.1,0,0.2,0,4
+Kalimantan Selatan,0.5,0,0,0,0,12.6
+Kalimantan Timur,0.6,0,0,0.1,0,2.3
+Kalimantan Utara,0.7,0,0,0.1,0,4.8
+Sulawesi Utara,0.1,0,0,0,0,0
+Gorontalo,1.6,0,0,0.1,0,0
+Sulawesi Tengah,1.7,0.2,0,0.2,1,1.7
+Sulawesi Selatan,4.3,0.2,0,0.4,0.1,3
+Sulawesi Barat,0.2,0,0,0,0,2.1
+Sulawesi Tenggara,0,0,0,0,0,0.3
+Bali,2.9,0,0,0.3,0,3.6
+NTB,2.8,0.2,0.1,0.4,0.2,1.9
+NTT,1.5,0.1,0,0.1,0,3.4
+Maluku,0,0,0,0,0,5.2
+Maluku Utara,0,0,0,0,0.2,0.7
+Papua,1,0.3,0,0.1,0.5,7.1
+Papua Barat,1.2,0.2,0,0.2,0.1,1.4
+Indonesia,1.9,0.2,0.1,0.3,0.2,4.6
