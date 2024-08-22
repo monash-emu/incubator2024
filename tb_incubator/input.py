@@ -7,6 +7,17 @@ project_paths = set_project_base_path("../tb_incubator")
 def get_age_groups_in_range(age_groups, lower_limit, upper_limit):
     return [i for i in age_groups if '+' not in i and lower_limit <= int(i.split('-')[0]) <= upper_limit]
 
+
+def get_un_pop_data():
+    un_pop_data = pd.read_csv(data_path / "id_pop_deaths.csv")
+    un_pops = pd.DataFrame({
+        "population": un_pop_data["population"],
+        "deaths": un_pop_data["deaths"]
+    })
+    un_pops.index = pd.MultiIndex.from_frame(un_pop_data[["year", "age"]])
+    return un_pops
+
+
 # load UN birth data
 data_path = project_paths["DATA_PATH"]
 demographics = pd.read_csv(data_path / 'un_demographics.csv')
