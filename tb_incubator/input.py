@@ -121,14 +121,23 @@ def get_pop_death_data():
 # Calculate death rates
 def calculate_death_rates(id_pop_deaths):
     age_groups = set(id_pop_deaths.index.get_level_values(1))
-    years = set(id_pop_deaths.index.get_level_values(0))
+    years = set(id_pop_deaths.index.get_level_values(0))    
+
+    agegroup_request2 = [[0, 4], [5, 14], [15, 34], [35, 49], [50, 100]]
+    agegroup_map2 = {low: get_age_groups_in_range(age_groups, low, up) for low, up in agegroup_request2}
+    agegroup_map2[agegroup_request2[-1][0]].append('100+')
+    agegroup_map2
 
     mapped_rates = pd.DataFrame()
     for year in years:
-        for agegroup in age_groups:
-            data = id_pop_deaths.loc[(year, agegroup)]
-            mapped_rates.loc[year, agegroup] = data['deaths'] / data['population']
-
+        for agegroup in agegroup_map2:
+            age_mask = [i in agegroup_map2[agegroup] for i in id_pop_deaths.index.get_level_values(1)]
+            age_year_data = id_pop_deaths.loc[age_mask].loc[year, :]
+            total = age_year_data.sum()
+            mapped_rates.loc[year, agegroup] = total['deaths'] / total['population']
+    
+    mapped_rates = mapped_rates.loc[id_pop_deaths.index.get_level_values(0)]
+           
     return mapped_rates
 
 def get_death_rates():
@@ -153,3 +162,6 @@ if __name__ == "__main__":
     death_rates = get_death_rates()
     print("Death Rates:")
     print(death_rates)
+    
+
+
