@@ -121,7 +121,7 @@ def get_pop_death_data():
 # Calculate death rates
 def calculate_death_rates(id_pop_deaths):
     age_groups = set(id_pop_deaths.index.get_level_values(1))
-    years = set(id_pop_deaths.index.get_level_values(0))    
+    years = set(id_pop_deaths.index.get_level_values(0).unique())    
 
     agegroup_request2 = [[0, 4], [5, 14], [15, 34], [35, 49], [50, 100]]
     agegroup_map2 = {low: get_age_groups_in_range(age_groups, low, up) for low, up in agegroup_request2}
@@ -136,13 +136,15 @@ def calculate_death_rates(id_pop_deaths):
             total = age_year_data.sum()
             mapped_rates.loc[year, agegroup] = total['deaths'] / total['population']
     
-    mapped_rates = mapped_rates.loc[id_pop_deaths.index.get_level_values(0)]
+    mapped_rates = mapped_rates.loc[id_pop_deaths.index.get_level_values(0).unique()]
            
     return mapped_rates
 
 def get_death_rates():
     id_pop_deaths = get_pop_death_data()
-    return calculate_death_rates(id_pop_deaths)
+    death_rates = calculate_death_rates(id_pop_deaths)
+    return death_rates
+
 
 # Main Blocks
 if __name__ == "__main__":
