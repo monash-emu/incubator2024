@@ -7,3 +7,4 @@
 *.svg
 */*_files/
 */.ipynb_checkpoints/*
+*.egg-info
