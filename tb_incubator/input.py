@@ -10,7 +10,7 @@ def get_age_groups_in_range(age_groups, lower_limit, upper_limit):
 
 # Birth rate
 def load_and_process_birth_data():
-    demographics = pd.read_csv(data_path / 'un_demographics.csv')
+    demographics = pd.read_csv(data_path / 'un_demographics.csv', low_memory=False)
     countries = ["Indonesia"]  # Select Indonesia's data
     id_demographics = demographics[demographics["Location"].isin(countries)].reset_index(drop=True)
     id_demographics['Time'] = pd.to_datetime(id_demographics['Time'].astype(str).str.extract('(\d+)', expand=False), format='%Y').dt.year
@@ -29,7 +29,7 @@ def get_birth_rate():
 
 # Load Indonesia's mortality data
 def load_death_data():
-    un_deaths = pd.read_csv(data_path / 'un_deaths_single_age.csv')
+    un_deaths = pd.read_csv(data_path / 'un_deaths_single_age.csv', low_memory=False)
     countries = ["Indonesia"]  # Select Indonesia's data
     deaths = un_deaths[un_deaths["Region, subregion, country or area *"].isin(countries)].reset_index(drop=True)
     deaths = deaths.drop(columns=deaths.columns[0:10])
@@ -65,7 +65,7 @@ def process_death_data(id_deaths, agegroup_request):
 
 # Get Indonesia's population data
 def load_population_data():
-    un_pop = pd.read_csv(data_path / 'un_population.csv')
+    un_pop = pd.read_csv(data_path / 'un_population.csv', low_memory=False)
     countries = ["Indonesia"]  # Select Indonesia's data
     pop = un_pop[un_pop["Region, subregion, country or area *"].isin(countries)].reset_index(drop=True)
     pop = pop.drop(columns=pop.columns[0:10])
