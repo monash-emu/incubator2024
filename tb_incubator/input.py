@@ -64,7 +64,8 @@ def get_birth_rate():
         pd.Series: A Series containing the birth rate data, indexed by year.
     """
     id_births = load_and_process_birth_data()
-    return id_births["birth_rate"]
+    description = "Loaded annual birth rate data for Indonesia"
+    return id_births["birth_rate"], description
 
 
 def load_death_data():
@@ -232,8 +233,9 @@ def get_pop_death_data():
 
     id_pop = load_population_data()
     id_pop_agegroups = process_population_data(id_pop, agegroup_request)
+    description = "Loaded data on population and deaths in Indonesia, stratified by age group"
 
-    return merge_population_death_data(id_pop_agegroups, id_deaths_agegroups)
+    return merge_population_death_data(id_pop_agegroups, id_deaths_agegroups), description
 
 
 def calculate_death_rates(id_pop_deaths):
@@ -283,9 +285,10 @@ def get_death_rates():
     Returns:
         pd.DataFrame: A DataFrame with calculated death rates, indexed by year and age group.
     """
-    id_pop_deaths = get_pop_death_data()
+    id_pop_deaths, description = get_pop_death_data()
     death_rates = calculate_death_rates(id_pop_deaths)
-    return death_rates
+    description = "Loaded death rates in Indonesia, stratified by age group"
+    return death_rates, description
 
 def get_population_entry_rate(pop_data, model_start_period):
     """
@@ -311,8 +314,9 @@ def get_population_entry_rate(pop_data, model_start_period):
     pop_entry[pop_start_year] = total_pop_by_year[pop_start_year] / start_period
     pop_entry = pop_entry.sort_index()
     entry_rate = get_sigmoidal_interpolation_function(pop_entry.index, pop_entry)
+    description = "We calculated the population entry rates based on total population data over the years"
 
-    return entry_rate
+    return entry_rate, description
 
 
 def get_death_adjs(deathrate_df, age_strata):
@@ -341,35 +345,6 @@ def get_death_adjs(deathrate_df, age_strata):
         death_adjs[str(age)] = Overwrite(pop_death_func)
     return death_adjs
 
-# Add latency structures
-def add_latency_flow(model):
-    """
-    Adds latency flows to the compartmental model, representing the progression of the disease
-    through different stages of latency. This function defines three main flows: stabilization,
-    early activation, and late activation.
-
-    - Stabilization flow represents the transition of individuals from the 'early_latent' compartment
-      to the 'late_latent' compartment, indicating a period where the disease does not progress or show symptoms.
-
-    - Early activation flow represents the transition from 'early_latent' to 'infectious', modeling the
-      scenario where the disease becomes active and infectious shortly after the initial infection.
-
-    - Late activation flow represents the transition from 'late_latent' to 'infectious', modeling the
-      scenario where the disease becomes active and infectious after a longer period of latency.
-
-    Each flow is defined with a name, a rate (set to 1.0 and will be adjusted based on empirical data or model needs), and the source and destination compartments.
-
-    Args:
-        model: The compartmental model to which the latency flows are to be added.
-    """
-    latency_flows = [
-    ["stabilisation", "early latent", "late latent"],
-    ["early activation", "early latent", "infectious"],
-    ["late activation", "late latent", "infectious"],
-    ]
-    
-    for flow, source, dest in latency_flows:
-        model.add_transition_flow(flow, Parameter(f"{flow} rate"), source, dest)
 
 def display_summary(birth_data, pop_death_data):
     """

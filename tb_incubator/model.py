@@ -35,3 +35,7 @@ def add_latency_flow(model):
     
     for flow, source, dest in latency_flows:
         model.add_transition_flow(flow, Parameter(f"{flow} rate"), source, dest)
+
+    description= "We added latency flows to the compartmental model, representing the progression of the disease through different stages of latency. This function defines three main flows: stabilization, early activation, and late activation."
+
+    return description
