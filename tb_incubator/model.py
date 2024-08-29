@@ -9,9 +9,9 @@ data_path = project_paths["DATA_PATH"]
 # Add latency structures
 def add_latency_flow(model):
     latency_flows = [
-    ["stabilisation", "early latent", "late latent"],
-    ["early activation", "early latent", "infectious"],
-    ["late activation", "late latent", "infectious"],
+        ["stabilisation", "early latent", "late latent"],
+        ["early activation", "early latent", "infectious"],
+        ["late activation", "late latent", "infectious"],
     ]
     
     for flow, source, dest in latency_flows:
@@ -22,16 +22,17 @@ def add_latency_flow(model):
     return description
 
 def add_infection_flow(model):
-    infection_flows = [("susceptible", None),
-                       ("late latent", "rr_infection_latent",),
-                       ("recovered", "rr_infection_recovered",),
+    infection_flows = [
+        ["susceptible", None],
+        ["late latent", "rr_infection_latent"],
+        ["recovered", "rr_infection_recovered"],
     ]
 
     for origin, modifier in infection_flows:
         modifier = Parameter(modifier) if modifier else 1.0
-        flow_rate = Parameter("contact rate") * modifier
-        model.add_infection_frequency_flow(f"infection_from_{origin}", flow_rate, 
-                                           origin, "early latent")
+        rate = Parameter("contact rate") * modifier
+        name = f"infection_from_{origin}"
+        model.add_infection_frequency_flow(name, rate, origin, "early latent")
 
     description= "We added infection flows to the model."
 
