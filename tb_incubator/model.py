@@ -22,12 +22,17 @@ def add_latency_flow(model):
     return description
 
 def add_infection_flow(model):
-    infection_origins = ["susceptible", "late latent", "recovered"]
+    infection_flows = [("susceptible", None),
+                       ("late ilatent", "rr_infection_latent",),
+                       ("recovered", "rr_infection_recovered",),
+    ]
 
-    for origin in infection_origins:
-        model.add_infection_frequency_flow(f"infection_from_{origin}", Parameter("contact rate"), 
+    for origin, modifier in infection_flows:
+        modifier = Parameter(modifier) if modifier else 1.0
+        flow_rate = Parameter("contact rate") * modifier
+        model.add_infection_frequency_flow(f"infection_from_{origin}", flow_rate, 
                                            origin, "early latent")
-        
+
     description= "We added infection flows to the model."
 
     return description
