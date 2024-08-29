@@ -23,7 +23,7 @@ def add_latency_flow(model):
 
 def add_infection_flow(model):
     infection_flows = [("susceptible", None),
-                       ("late ilatent", "rr_infection_latent",),
+                       ("late latent", "rr_infection_latent",),
                        ("recovered", "rr_infection_recovered",),
     ]
 
