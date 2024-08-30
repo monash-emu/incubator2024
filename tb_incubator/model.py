@@ -1,4 +1,5 @@
 import pandas as pd
+from summer2 import CompartmentalModel
 from tb_incubator.constants import set_project_base_path
 from summer2.parameters import Parameter
 
@@ -7,6 +8,7 @@ project_paths = set_project_base_path("../tb_incubator")
 data_path = project_paths["DATA_PATH"]
 
 # Add latency structures
+
 def add_latency_flow(model):
     latency_flows = [
         ["stabilisation", "early latent", "late latent"],
@@ -15,23 +17,21 @@ def add_latency_flow(model):
     ]
     
     for flow, source, dest in latency_flows:
+        print(f"Adding flow: {flow}, from {source} to {dest}")
         model.add_transition_flow(flow, Parameter(f"{flow} rate"), source, dest)
 
-    description= "We added latency flows to the compartmental model, representing the progression of the disease through different stages of latency. This function defines three main flows: stabilization, early activation, and late activation."
-
-    return description
 
 def add_infection_flow(model):
     infection_flows = [
         ["susceptible", None],
-        ["late latent", "rr_infection_latent"],
-        ["recovered", "rr_infection_recovered"],
+        ["late latent", "rr infection latent"],
+        ["recovered", "rr infection recovered"],
     ]
 
     for origin, modifier in infection_flows:
         modifier = Parameter(modifier) if modifier else 1.0
         rate = Parameter("contact rate") * modifier
-        name = f"infection_from_{origin}"
+        name = f"infection from {origin}"
         model.add_infection_frequency_flow(name, rate, origin, "early latent")
 
     description= "We added infection flows to the model."
