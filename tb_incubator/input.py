@@ -1,8 +1,8 @@
 import pandas as pd
+from typing import List, Dict
+from math import log, exp
 from tb_incubator.constants import set_project_base_path
 from summer2.functions.time import get_sigmoidal_interpolation_function
-from summer2 import Overwrite
-from summer2.parameters import Parameter
 
 
 project_paths = set_project_base_path("../tb_incubator")
@@ -290,7 +290,7 @@ def get_death_rates():
     description = "Loaded death rates in Indonesia, stratified by age group"
     return death_rates, description
 
-def get_population_entry_rate(pop_data, model_start_period):
+def get_population_entry_rate(model_start_period):
     """
     Calculates the population entry rates based on total population data over the years.
 
@@ -305,6 +305,7 @@ def get_population_entry_rate(pop_data, model_start_period):
         This will only work for annual data.
     """
     # Population by year and get the duration of the run-in period
+    pop_data, description = get_pop_death_data()
     total_pop_by_year = pop_data.groupby("year")["population"].sum()
     pop_start_year = total_pop_by_year.index[0]
     start_period = pop_start_year - model_start_period
@@ -318,131 +319,10 @@ def get_population_entry_rate(pop_data, model_start_period):
 
     return entry_rate, description
 
-
-def get_death_adjs(deathrate_df, age_strata):
+def get_average_sigmoid(low_val, upper_val, inflection): # Long's code # Ragonnet, R., et al. (2019)
     """
-    Generate age-specific death adjustment functions based on age strata and death rate data.
-    
-    This function calculates and returns a dictionary of functions for adjusting death rates by age. 
-    It creates a sigmoidal interpolation function based on the provided death rate data, for each age 
-    group specified in `age_strata`.
-
-    Parameters:
-    - deathrate_df (pd.DataFrame): A DataFrame containing death rates with years as the index 
-      and age groups as columns.
-    - age_strata (list): A list of age groups.
-
-    Returns:
-    - dict: A dictionary where each key is an age group (as a string) and each value is an 
-      `Overwrite` object containing the sigmoidal interpolation function for that age group's 
-      death rates.
+    A sigmoidal function (x -> 1 / (1 + exp(-(x-alpha)))) is used to model a progressive increase with age.
     """
-    death_adjs = {}
-    for age in age_strata:
-        years = deathrate_df.index
-        rates = deathrate_df[age]
-        pop_death_func = get_sigmoidal_interpolation_function(years, rates)
-        death_adjs[str(age)] = Overwrite(pop_death_func)
-    return death_adjs
-
-
-def display_summary(birth_data, pop_death_data):
-    """
-    Generates a summary table of key demographic metrics from the provided birth and population-death data.
-
-    Parameters:
-    - birth_data (DataFrame): DataFrame containing birth rates with a datetime index.
-    - pop_death_data (DataFrame): DataFrame containing population and death data with a multi-level index (year, strata).
-
-    Returns:
-    - DataFrame: A table summarizing the following metrics for the start, middle, and end years of the dataset:
-        - **Total Population**: Aggregated and formatted with thousands separators.
-        - **Total Deaths**: Aggregated and formatted with thousands separators.
-        - **Birth Rate**: Extracted and formatted to four decimal places.
-
-    The table provides a concise overview of demographic changes at three distinct points in time, offering insights into population and mortality trends along with birth rates.
-    
-    """
-    start_year = birth_data.index[0]
-    middle_year = (birth_data.index[0] + birth_data.index[-1]) // 2
-    end_year = birth_data.index[-1]
-
-    birth_rate_start = birth_data.loc[start_year].item()
-    birth_rate_middle = birth_data.loc[middle_year].item()
-    birth_rate_end = birth_data.loc[end_year].item()
-
-    total_pop_start = pop_death_data.loc[(start_year, slice(None)), 'population'].sum().item()
-    total_pop_middle = pop_death_data.loc[(middle_year, slice(None)), 'population'].sum().item()
-    total_pop_end = pop_death_data.loc[(end_year, slice(None)), 'population'].sum().item()
-
-    total_death_start = pop_death_data.loc[(start_year, slice(None)), 'deaths'].sum().item()
-    total_death_middle = pop_death_data.loc[(middle_year, slice(None)), 'deaths'].sum().item()
-    total_death_end = pop_death_data.loc[(end_year, slice(None)), 'deaths'].sum().item()
-
-    total_pop = {
-    start_year: f"{total_pop_start:,}",
-    middle_year: f"{total_pop_middle:,}",
-    end_year: f"{total_pop_end:,}"
-    }
-
-    total_death = {
-    start_year: f"{total_death_start:,}",
-    middle_year: f"{total_death_middle:,}",
-    end_year: f"{total_death_end:,}"
-    }
-
-    birthrate = {
-    start_year: f"{birth_rate_start:,.4f}",  # Adjust to 2 decimal places if needed
-    middle_year: f"{birth_rate_middle:,.4f}",
-    end_year: f"{birth_rate_end:,.4f}"
-    }
-
-    summary_table = pd.DataFrame({"Total Population": total_pop, "Total Death": total_death, "Birth rate": birthrate})
-
-    return summary_table
-
-
-notif= {
-    1980: 25235,
-    1981: 32461,
-    1982: 33000,
-    1983: 31809,
-	1984: 32432,
-	1985: 17681,
-	1986: 16750,
-	1987: 0,
-	1988: 97505,
-	1989: 105516,
-	1990: 74470,
-	1991: 60808,
-	1992: 98458,
-	1993: 62966,
-	1994: 49647,
-	1995: 35529,
-	1996: 24647,
-	1997: 22184,
-	1998: 40497,
-	1999: 69064,
-	2000: 84591,
-	2001: 92792,
-	2002: 155188,
-	2003: 174174,
-	2004: 210229,
-	2005: 254601,
-	2006: 277589,
-	2007: 275193,
-	2008: 296514,
-	2009: 292754,
-	2010: 300659,
-	2011: 318949,
-	2012: 328824,
-	2013: 325582,
-	2014: 322806,
-	2015: 331703,
-	2016: 364671,
-	2017: 442172,
-	2018: 568865,
-	2019: 559847,
-	2020: 384025,
-	2021: 432577,
-	2022: 708658}
+    return (
+        log(1.0 + exp(upper_val - inflection)) - log(1.0 + exp(low_val - inflection))
+    ) / (upper_val - low_val)
