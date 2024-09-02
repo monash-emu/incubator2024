@@ -1,6 +1,5 @@
 import pandas as pd
 from typing import List, Dict
-from math import log, exp
 from tb_incubator.constants import set_project_base_path
 from summer2.functions.time import get_sigmoidal_interpolation_function
 
@@ -319,10 +318,3 @@ def get_population_entry_rate(model_start_period):
 
     return entry_rate, description
 
-def get_average_sigmoid(low_val, upper_val, inflection): # Long's code # Ragonnet, R., et al. (2019)
-    """
-    A sigmoidal function (x -> 1 / (1 + exp(-(x-alpha)))) is used to model a progressive increase with age.
-    """
-    return (
-        log(1.0 + exp(upper_val - inflection)) - log(1.0 + exp(low_val - inflection))
-    ) / (upper_val - low_val)

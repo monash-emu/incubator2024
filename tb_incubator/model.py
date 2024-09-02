@@ -1,10 +1,11 @@
 import pandas as pd
 from typing import List, Dict
-from summer2 import Overwrite, AgeStratification, Multiply
+from summer2 import Overwrite, AgeStratification, Multiply, CompartmentalModel
 from summer2.parameters import Parameter, Time, Function
 from summer2.functions.time import get_sigmoidal_interpolation_function
-from tb_incubator.input import get_average_sigmoid, get_death_rates
+from tb_incubator.input import get_death_rates
 from tb_incubator.constants import set_project_base_path
+from tb_incubator.utils import get_average_sigmoid, triangle_wave_func
 
 project_paths = set_project_base_path("../tb_incubator")
 data_path = project_paths["DATA_PATH"]
@@ -106,50 +107,25 @@ def add_infectiousness_adjs( # inspired by Long's code
                 
             strat.add_infectiousness_adjustments(comp, inf_adjs)
 
-# Age-stratified BCG effects (based on Long's code)
-def bcg_multiplier_func(tfunc, fmultiplier):
-    return 1.0 - tfunc / 100.0 * (1.0 - fmultiplier)
-
-def get_average_age_for_bcg(agegroup, age_breakpoints):
-    agegroup_idx = age_breakpoints.index(int(agegroup))
-    if agegroup_idx == len(age_breakpoints) - 1:
-        # We should normally never be in this situation because the last agegroup is not affected by BCG anyway.
-        print(
-            "Warning: the agegroup name is being used to represent the average age of the group"
-        )
-        return float(agegroup)
-    else:
-        return 0.5 * (age_breakpoints[agegroup_idx] + age_breakpoints[agegroup_idx + 1])
-
-def calculate_bcg_adjustment(
-    age: float,
-    multiplier: float,
-    age_strata: List[int],
-    bcg_time_keys: List[float],
-    bcg_time_values: List[float],
-):
+def seed_infectious(model: CompartmentalModel):
     """
-    Calculates an age-adjusted BCG vaccine efficacy multiplier for individuals based on
-    their age and the provided BCG time keys and values. If the given multiplier is less
-    than 1.0, indicating some vaccine efficacy, the function calculates an age-adjusted
-    multiplier using a sigmoidal interpolation function.
+    Adds an importation flow to the model to simulate the initial seeding of infectious individuals.
+    This is used to introduce the disease into the population at any time of the simulation.
 
     Args:
-        age: The age of the individual for which the adjustment is being calculated.
-        multiplier: The baseline efficacy multiplier of the BCG vaccine.
-        age_strata: A list of age groups used in the model for stratification.
-        bcg_time_keys: A list of time points (usually in years) for the sigmoidal interpolation function.
-        bcg_time_values: A list of efficacy multipliers corresponding to the bcg_time_keys.
+        model: The compartmental model to which the infectious seed is to be added.
     """
-    if multiplier < 1.0:
-        # Calculate age-adjusted multiplier using a sigmoidal interpolation function
-        age_adjusted_time = Time - get_average_age_for_bcg(age, age_strata)
-        interpolation_func = get_sigmoidal_interpolation_function(
-            bcg_time_keys,
-            bcg_time_values,
-            age_adjusted_time,
-        )
-        return Multiply(Function(bcg_multiplier_func, [interpolation_func, multiplier]))
-    else:
-        # No adjustment needed for multipliers of 1.0
-        return None
+    seed_args = [
+        Time,
+        Parameter("seed_time"),
+        Parameter("seed_duration"),
+        Parameter("seed_num"),
+    ]
+    voc_seed_func = Function(triangle_wave_func, seed_args)
+    model.add_importation_flow(
+        "seed_infectious",
+        voc_seed_func,
+        "infectious",
+        split_imports=True,
+    )
+
