@@ -66,21 +66,21 @@ def set_latency_adjs(
         params: Dict[str, any], 
         age_strata: List[int],
         strat: AgeStratification):
-        for flow_name, latency_params in params["age latency"].items():
-            adjs = {}
-            for age in age_strata:
-                param_age_bracket = max([k for k in latency_params if k <= age])
-                age_val = latency_params[param_age_bracket]
+    for flow_name, latency_params in params["age latency"].items():
+        adjs = {}
+        for age in age_strata:
+            param_age_bracket = max([k for k in latency_params if k <= age])
+            age_val = latency_params[param_age_bracket]
 
-                adj = Parameter("progression multiplier") * age_val if "late activation" in flow_name else age_val
-                adjs[str(age)] = adj
-    
-        adjs = {k: Overwrite(v) for k, v in adjs.items()}
-        strat.set_flow_adjustments(flow_name, adjs)
+            adj = Parameter("progression multiplier") * age_val if "late activation" in flow_name else age_val
+            adjs[str(age)] = adj
 
-        desc = f"- Adding age-specific adjustment for latency flows"
+    adjs = {k: Overwrite(v) for k, v in adjs.items()}
+    strat.set_flow_adjustments(flow_name, adjs)
 
-        return desc
+    desc = f"- Adding age-specific adjustment for latency flows"
+
+    return desc
         
 
 def add_infectiousness_adjs(
@@ -88,8 +88,8 @@ def add_infectiousness_adjs(
           params: Dict[str, any],
           age_strata: List[int],
           strat: AgeStratification):
-      inf_switch_age = params["age_infectiousness_switch"]
-      for comp in infectious_comp:
+    inf_switch_age = params["age_infectiousness_switch"]
+    for comp in infectious_comp:
         inf_adjs = {}
         for i, age_low in enumerate(age_strata):
             if age_low == age_strata[-1]:
@@ -99,9 +99,8 @@ def add_infectiousness_adjs(
                 average_infectiousness = get_average_sigmoid(age_low, age_high, inf_switch_age)
             # Update the adjustments dictionary for the current age group.
             inf_adjs[str(age_low)] = Multiply(average_infectiousness)
-                
-                
-        strat.add_infectiousness_adjustments(comp, inf_adjs)
+            
+    strat.add_infectiousness_adjustments(comp, inf_adjs)
 
 def seed_infectious(model: CompartmentalModel):
     """
