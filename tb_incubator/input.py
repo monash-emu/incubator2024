@@ -64,7 +64,7 @@ def get_birth_rate():
         pd.Series: A Series containing the birth rate data, indexed by year.
     """
     id_births = load_and_process_birth_data()
-    description = "Loaded annual birth rate data for Indonesia"
+    description = f"- Loading annual birth rate data for Indonesia"
     return id_births["birth_rate"], description
 
 
@@ -233,7 +233,7 @@ def get_pop_death_data():
 
     id_pop = load_population_data()
     id_pop_agegroups = process_population_data(id_pop, agegroup_request)
-    description = "Loaded data on population and deaths in Indonesia, stratified by age group"
+    description = f"- Loading data on population and deaths in Indonesia, stratified by age group"
 
     return merge_population_death_data(id_pop_agegroups, id_deaths_agegroups), description
 
@@ -287,7 +287,7 @@ def get_death_rates():
     """
     id_pop_deaths, description = get_pop_death_data()
     death_rates = calculate_death_rates(id_pop_deaths)
-    description = "Loaded death rates in Indonesia, stratified by age group"
+    description = f"- Loading death rates in Indonesia, stratified by age group"
     return death_rates, description
 
 def get_population_entry_rate(model_start_period):
@@ -315,7 +315,7 @@ def get_population_entry_rate(model_start_period):
     pop_entry[pop_start_year] = total_pop_by_year[pop_start_year] / start_period
     pop_entry = pop_entry.sort_index()
     entry_rate = get_sigmoidal_interpolation_function(pop_entry.index, pop_entry)
-    description = "We calculated the population entry rates based on total population data over the years"
+    description = f"- Calculating the population entry rates based on total population data over the years"
 
     return entry_rate, description
 
