@@ -1,6 +1,7 @@
 from jax import numpy as jnp
 from math import log, exp
 
+
 def triangle_wave_func(
     time: float,
     start: float,
@@ -22,14 +23,15 @@ def triangle_wave_func(
     gradient = peak / (duration * 0.5)
     peak_time = start + duration * 0.5
     time_from_peak = jnp.abs(peak_time - time)
-    return jnp.where(
-        time_from_peak < duration * 0.5, peak - time_from_peak * gradient, 0.0
-    )
+    return jnp.where(time_from_peak < duration * 0.5, peak - time_from_peak * gradient, 0.0)
 
-def get_average_sigmoid(low_val, upper_val, inflection): # Long's code # Ragonnet, R., et al. (2019)
+
+def get_average_sigmoid(
+    low_val, upper_val, inflection
+):  # Long's code # Ragonnet, R., et al. (2019)
     """
     A sigmoidal function (x -> 1 / (1 + exp(-(x-alpha)))) is used to model a progressive increase with age.
     """
-    return (
-        log(1.0 + exp(upper_val - inflection)) - log(1.0 + exp(low_val - inflection))
-    ) / (upper_val - low_val)
+    return (log(1.0 + exp(upper_val - inflection)) - log(1.0 + exp(low_val - inflection))) / (
+        upper_val - low_val
+    )

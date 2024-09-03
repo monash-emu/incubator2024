@@ -23,7 +23,9 @@ def get_age_groups_in_range(age_groups, lower_limit, upper_limit):
     Notes:
         The function filters out age groups that contain '+' and selects only those with a starting age within the specified range.
     """
-    return [i for i in age_groups if '+' not in i and lower_limit <= int(i.split('-')[0]) <= upper_limit]
+    return [
+        i for i in age_groups if "+" not in i and lower_limit <= int(i.split("-")[0]) <= upper_limit
+    ]
 
 
 def load_and_process_birth_data():
@@ -42,18 +44,25 @@ def load_and_process_birth_data():
     Returns:
         pd.DataFrame: A DataFrame with columns for population, births, and birth rate, indexed by year.
     """
-    demographics = pd.read_csv(data_path / 'un_demographics.csv', low_memory=False)
+    demographics = pd.read_csv(data_path / "un_demographics.csv", low_memory=False)
     countries = ["Indonesia"]  # Select Indonesia's data
     id_demographics = demographics[demographics["Location"].isin(countries)].reset_index(drop=True)
-    id_demographics['Time'] = pd.to_datetime(id_demographics['Time'].astype(str).str.extract('(\d+)', expand=False), format='%Y').dt.year
-    id_demographics = id_demographics.set_index('Time')  # Set `Time` column as index
+    id_demographics["Time"] = pd.to_datetime(
+        id_demographics["Time"].astype(str).str.extract("(\d+)", expand=False), format="%Y"
+    ).dt.year
+    id_demographics = id_demographics.set_index("Time")  # Set `Time` column as index
 
     id_births = id_demographics.loc[1950:2023]  # Select 1950-2023 data
     id_births = id_births[["TPopulation1July", "Births"]]
-    id_births['Birth_rate'] = id_births['Births'] / id_births['TPopulation1July']  # Calculate birth rate
-    id_births = id_births.rename(columns={'TPopulation1July': 'population', "Births": "births", "Birth_rate": "birth_rate"})  # Rename columns
+    id_births["Birth_rate"] = (
+        id_births["Births"] / id_births["TPopulation1July"]
+    )  # Calculate birth rate
+    id_births = id_births.rename(
+        columns={"TPopulation1July": "population", "Births": "births", "Birth_rate": "birth_rate"}
+    )  # Rename columns
 
     return id_births
+
 
 def get_birth_rate():
     """
@@ -83,14 +92,20 @@ def load_death_data():
     Returns:
         pd.DataFrame: A DataFrame with a MultiIndex (year and age group) and columns for death counts.
     """
-    un_deaths = pd.read_csv(data_path / 'un_deaths_single_age.csv', low_memory=False)
+    un_deaths = pd.read_csv(data_path / "un_deaths_single_age.csv", low_memory=False)
     countries = ["Indonesia"]  # Select Indonesia's data
-    deaths = un_deaths[un_deaths["Region, subregion, country or area *"].isin(countries)].reset_index(drop=True)
+    deaths = un_deaths[
+        un_deaths["Region, subregion, country or area *"].isin(countries)
+    ].reset_index(drop=True)
     deaths = deaths.drop(columns=deaths.columns[0:10])
 
-    deaths['Year'] = pd.to_datetime(deaths['Year'].astype(str).str.extract('(\d+)', expand=False), format='%Y').dt.year
+    deaths["Year"] = pd.to_datetime(
+        deaths["Year"].astype(str).str.extract("(\d+)", expand=False), format="%Y"
+    ).dt.year
     deaths_melt = pd.melt(deaths, id_vars="Year")
-    deaths_melt = deaths_melt.rename(columns={'Year': 'year', 'variable': 'age_group', 'value': 'deaths'})
+    deaths_melt = deaths_melt.rename(
+        columns={"Year": "year", "variable": "age_group", "value": "deaths"}
+    )
 
     id_deaths = pd.DataFrame(deaths_melt)
     id_deaths.index = pd.MultiIndex.from_frame(deaths_melt[["year", "age_group"]])
@@ -102,7 +117,7 @@ def load_death_data():
 def process_death_data(id_deaths, agegroup_request):
     """
     Processes death data to aggregate deaths into specified age groups.
-    
+
     Args:
         id_deaths (pd.DataFrame): DataFrame with a MultiIndex (year, age group) and a 'deaths' column.
         agegroup_request (list of lists): List of age ranges (e.g., [[0, 4], [5, 14], [15, 34], [35, 49], [50, 100]]).
@@ -111,11 +126,16 @@ def process_death_data(id_deaths, agegroup_request):
         pd.DataFrame: A DataFrame with a MultiIndex (year, age group) and a 'deaths' column, aggregated by the specified age groups.
     """
     age_groups = set(id_deaths.index.get_level_values(1))
-    agegroup_map = {f"{low}-{up}": get_age_groups_in_range(age_groups, low, up) for low, up in agegroup_request}
-    if '100+' in age_groups:
-        agegroup_map['50-100'].append('100+')
+    agegroup_map = {
+        f"{low}-{up}": get_age_groups_in_range(age_groups, low, up) for low, up in agegroup_request
+    }
+    if "100+" in age_groups:
+        agegroup_map["50-100"].append("100+")
 
-    index = pd.MultiIndex.from_product([id_deaths.index.get_level_values(0).unique(), agegroup_map.keys()], names=['year', 'agegroup'])
+    index = pd.MultiIndex.from_product(
+        [id_deaths.index.get_level_values(0).unique(), agegroup_map.keys()],
+        names=["year", "agegroup"],
+    )
     id_deaths_agegroups = pd.DataFrame(index=index, columns=["deaths"])
 
     for year in id_deaths.index.get_level_values(0).unique():
@@ -145,18 +165,24 @@ def load_population_data():
     Returns:
         pd.DataFrame: A DataFrame with a MultiIndex (year, age_group) and a 'population' column.
     """
-    un_pop = pd.read_csv(data_path / 'un_population.csv', low_memory=False)
+    un_pop = pd.read_csv(data_path / "un_population.csv", low_memory=False)
     countries = ["Indonesia"]  # Select Indonesia's data
-    pop = un_pop[un_pop["Region, subregion, country or area *"].isin(countries)].reset_index(drop=True)
+    pop = un_pop[un_pop["Region, subregion, country or area *"].isin(countries)].reset_index(
+        drop=True
+    )
     pop = pop.drop(columns=pop.columns[0:10])
 
-    pop['Year'] = pd.to_datetime(pop['Year'].astype(str).str.extract('(\d+)', expand=False), format='%Y').dt.year
+    pop["Year"] = pd.to_datetime(
+        pop["Year"].astype(str).str.extract("(\d+)", expand=False), format="%Y"
+    ).dt.year
     pop_melt = pd.melt(pop, id_vars="Year")
-    pop_melt = pop_melt.rename(columns={'Year': 'year', 'variable': 'age_group', 'value': 'population'})
+    pop_melt = pop_melt.rename(
+        columns={"Year": "year", "variable": "age_group", "value": "population"}
+    )
 
-    id_pop = pd.DataFrame({'population': pop_melt["population"]})
+    id_pop = pd.DataFrame({"population": pop_melt["population"]})
     id_pop.index = pd.MultiIndex.from_frame(pop_melt[["year", "age_group"]])
-    id_pop["population"] = pd.to_numeric(id_pop["population"], errors='coerce') * 1000
+    id_pop["population"] = pd.to_numeric(id_pop["population"], errors="coerce") * 1000
 
     return id_pop
 
@@ -173,11 +199,15 @@ def process_population_data(id_pop, agegroup_request):
         pd.DataFrame: A DataFrame with MultiIndex (year, agegroup) and a 'population' column aggregated by age groups.
     """
     age_groups = set(id_pop.index.get_level_values(1))
-    agegroup_map = {f"{low}-{up}": get_age_groups_in_range(age_groups, low, up) for low, up in agegroup_request}
-    if '100+' in age_groups:
-        agegroup_map['50-100'].append('100+')
+    agegroup_map = {
+        f"{low}-{up}": get_age_groups_in_range(age_groups, low, up) for low, up in agegroup_request
+    }
+    if "100+" in age_groups:
+        agegroup_map["50-100"].append("100+")
 
-    index = pd.MultiIndex.from_product([id_pop.index.get_level_values(0).unique(), agegroup_map.keys()], names=['year', 'agegroup'])
+    index = pd.MultiIndex.from_product(
+        [id_pop.index.get_level_values(0).unique(), agegroup_map.keys()], names=["year", "agegroup"]
+    )
     id_pop_agegroups = pd.DataFrame(index=index, columns=["population"])
 
     for year in id_pop.index.get_level_values(0).unique():
@@ -206,11 +236,16 @@ def merge_population_death_data(id_pop_agegroups, id_deaths_agegroups):
     Returns:
         pd.DataFrame: A DataFrame with MultiIndex (year, agegroup), including 'population' and 'deaths' columns.
     """
-    id_pop_deaths = pd.merge(id_pop_agegroups, id_deaths_agegroups, left_index=True, right_index=True)
-    id_pop_deaths['population'] = pd.to_numeric(id_pop_deaths['population'], errors='coerce').astype(int)
-    id_pop_deaths['deaths'] = pd.to_numeric(id_pop_deaths['deaths'], errors='coerce')
+    id_pop_deaths = pd.merge(
+        id_pop_agegroups, id_deaths_agegroups, left_index=True, right_index=True
+    )
+    id_pop_deaths["population"] = pd.to_numeric(
+        id_pop_deaths["population"], errors="coerce"
+    ).astype(int)
+    id_pop_deaths["deaths"] = pd.to_numeric(id_pop_deaths["deaths"], errors="coerce")
 
     return id_pop_deaths
+
 
 def get_pop_death_data():
     """
@@ -253,24 +288,29 @@ def calculate_death_rates(id_pop_deaths):
         pd.DataFrame: A DataFrame with age-specific death rates, indexed by year and age group.
     """
     age_groups = set(id_pop_deaths.index.get_level_values(1))
-    years = set(id_pop_deaths.index.get_level_values(0).unique())    
+    years = set(id_pop_deaths.index.get_level_values(0).unique())
 
     agegroup_request2 = [[0, 4], [5, 14], [15, 34], [35, 49], [50, 100]]
-    agegroup_map2 = {low: get_age_groups_in_range(age_groups, low, up) for low, up in agegroup_request2}
-    agegroup_map2[agegroup_request2[-1][0]].append('100+')
+    agegroup_map2 = {
+        low: get_age_groups_in_range(age_groups, low, up) for low, up in agegroup_request2
+    }
+    agegroup_map2[agegroup_request2[-1][0]].append("100+")
     agegroup_map2
 
     mapped_rates = pd.DataFrame()
     for year in years:
         for agegroup in agegroup_map2:
-            age_mask = [i in agegroup_map2[agegroup] for i in id_pop_deaths.index.get_level_values(1)]
+            age_mask = [
+                i in agegroup_map2[agegroup] for i in id_pop_deaths.index.get_level_values(1)
+            ]
             age_year_data = id_pop_deaths.loc[age_mask].loc[year, :]
             total = age_year_data.sum()
-            mapped_rates.loc[year, agegroup] = total['deaths'] / total['population']
-    
+            mapped_rates.loc[year, agegroup] = total["deaths"] / total["population"]
+
     mapped_rates = mapped_rates.loc[id_pop_deaths.index.get_level_values(0).unique()]
-           
+
     return mapped_rates
+
 
 def get_death_rates():
     """
@@ -289,6 +329,7 @@ def get_death_rates():
     description = f"- Loading death rates in Indonesia, stratified by age group"
     return death_rates, description
 
+
 def get_population_entry_rate(model_start_period):
     """
     Calculates the population entry rates based on total population data over the years.
@@ -299,7 +340,7 @@ def get_population_entry_rate(model_start_period):
 
     Returns:
         entry_rate (function): A function that provides sigmoidal interpolation of the calculated population entry rates.
-        
+
     Notes:
         This will only work for annual data.
     """
@@ -314,7 +355,8 @@ def get_population_entry_rate(model_start_period):
     pop_entry[pop_start_year] = total_pop_by_year[pop_start_year] / start_period
     pop_entry = pop_entry.sort_index()
     entry_rate = get_sigmoidal_interpolation_function(pop_entry.index, pop_entry)
-    description = f"- Calculating the population entry rates based on total population data over the years"
+    description = (
+        f"- Calculating the population entry rates based on total population data over the years"
+    )
 
     return entry_rate, description
-
