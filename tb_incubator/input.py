@@ -72,7 +72,7 @@ def get_birth_rate():
         pd.Series: A Series containing the birth rate data, indexed by year.
     """
     id_births = load_and_process_birth_data()
-    description = f"- Loading annual birth rate data for Indonesia"
+    description = f"- Loaded annual birth rate data for Indonesia"
     return id_births["birth_rate"], description
 
 
@@ -267,7 +267,7 @@ def get_pop_death_data():
 
     id_pop = load_population_data()
     id_pop_agegroups = process_population_data(id_pop, agegroup_request)
-    description = f"- Loading data on population and deaths in Indonesia, stratified by age group"
+    description = (f"- Loaded data on population and deaths in Indonesia, stratified by age group")
 
     return merge_population_death_data(id_pop_agegroups, id_deaths_agegroups), description
 
@@ -326,7 +326,7 @@ def get_death_rates():
     """
     id_pop_deaths, description = get_pop_death_data()
     death_rates = calculate_death_rates(id_pop_deaths)
-    description = f"- Loading death rates in Indonesia, stratified by age group"
+    description = f"- Loaded death rates in Indonesia, stratified by age group"
     return death_rates, description
 
 
