@@ -1,5 +1,5 @@
 from tb_incubator.constants import image_path
-from IPython.display import Image, display
+from IPython.display import display, SVG
 
 def set_plot_label(plot, indicator_names, y_axis):
     for trace in plot.data:
@@ -24,4 +24,7 @@ def display_plot(plot, plot_name, image_format):
     plot.write_image(image_path / f"{plot_name}.{image_format}", format=f"{image_format}")
 
     # Display an image
-    display(Image(image_path / f"{plot_name}.{image_format}"))
+    # The `rsvg-convert` utility must be installed for this function to work properly.
+    # To install it on macOS, use the following command:
+    # `brew install librsvg`
+    display(SVG(image_path / f"{plot_name}.{image_format}")) 
