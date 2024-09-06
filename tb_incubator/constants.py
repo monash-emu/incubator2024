@@ -43,9 +43,11 @@ def get_project_paths():
         "PROJECT_PATH": _PROJECT_PATH,
         "DATA_PATH": _PROJECT_PATH / "data",
         "LOCAL_DATA_PATH": _PROJECT_PATH / "data" / "local_data",
+        "IMAGE_PATH": _PROJECT_PATH / "supplementary",
     }
 
 
 project_paths = set_project_base_path("../tb_incubator")
 project_path = project_paths["PROJECT_PATH"]
 data_path = project_paths["DATA_PATH"]
+image_path = project_paths["IMAGE_PATH"]
