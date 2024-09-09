@@ -174,7 +174,7 @@ def add_infection_flow(model):
 
 
 def set_popdeath_adjs(age_strata: List[int], strat: AgeStratification):
-    deathrate_df, description = get_death_rates()
+    deathrate_df, _ = get_death_rates()
     death_adjs = {}
     for age in age_strata:
         years = deathrate_df.index
@@ -209,19 +209,18 @@ def add_infectiousness_adjs(
     age_strata: List[int],
     strat: AgeStratification,
 ):
-    inf_switch_age = params["age_infectiousness_switch"]
-    for comp in infectious_compartments:
-        inf_adjs = {}
-        for i, age_low in enumerate(age_strata):
-            if age_low == age_strata[-1]:
-                average_infectiousness = 1.0
-            else:
-                age_high = age_strata[i + 1]
-                average_infectiousness = get_average_sigmoid(age_low, age_high, inf_switch_age)
-            # Update the adjustments dictionary for the current age group.
-            inf_adjs[str(age_low)] = Multiply(average_infectiousness)
+    inf_adjs = {}
+    for i, age_low in enumerate(age_strata):
+        if age_low == age_strata[-1]:
+            average_infectiousness = 1.0
+        else:
+            age_high = age_strata[i + 1]
+            average_infectiousness = get_average_sigmoid(age_low, age_high, params["age_infectiousness_switch"])
+        # Update the adjustments dictionary for the current age group.
+        inf_adjs[str(age_low)] = Multiply(average_infectiousness)
 
-    strat.add_infectiousness_adjustments(comp, inf_adjs)
+    for comp in infectious_compartments:
+        strat.add_infectiousness_adjustments(comp, inf_adjs)
 
 
 def seed_infectious(model: CompartmentalModel):
