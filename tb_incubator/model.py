@@ -90,9 +90,7 @@ def build_model(
     )
 
     # Request model output
-    request_model_outputs(
-        model, compartments, latent_compartments, infectious_compartments, age_strata
-    )
+    request_model_outputs(model)
 
     desc = (
         "We used the [summer framework](https://summer2.readthedocs.io/en/latest/) "

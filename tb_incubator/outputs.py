@@ -3,14 +3,13 @@ from typing import List
 from summer2.parameters import Parameter, DerivedOutput
 import numpy as np
 
+from tb_incubator.constants import latent_compartments, infectious_compartments, age_strata
 
 def request_model_outputs(
     model: CompartmentalModel,
-    compartments: List[str],
-    latent_compartments: List[str],
-    infectious_compartments: List[str],
-    age_strata: List[int],
 ):
+    compartments = [c.name for c in model._original_compartment_names]
+
     # compartment size
     for c in compartments:
         model.request_output_for_compartments(f"comp_size_{c}", c)
