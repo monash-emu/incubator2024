@@ -97,6 +97,5 @@ def get_param_table(param_info):
 
     fixed_param_table = pd.DataFrame(param_table)
     fixed_param_table = fixed_param_table.set_index("Parameter")
-    desc = "- Defining parameters"
 
-    return fixed_param_table, desc
+    return fixed_param_table

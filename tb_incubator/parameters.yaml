@@ -23,7 +23,7 @@ value:
   universal_death: 0.1
   contact_rate: 1.1
   self_recovery_rate: 0.1
-  rr_infection_latent: 0.2
+  rr_infection_latent: 0.5
   rr_infection_recovered: 0.2
   age_latency:
     early_activation: 

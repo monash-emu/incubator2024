@@ -1,8 +1,12 @@
 from pathlib import Path
 
-compartments = ["susceptible", "early latent", "late latent", "infectious", "recovered"]
+compartments = ["susceptible", 
+                "early_latent", 
+                "late_latent", 
+                "infectious", 
+                "recovered"]
 
-latent_compartments = ["early latent", "late latent"]
+latent_compartments = ["early_latent", "late_latent"]
 infectious_compartments = ["infectious"]
 
 model_times = [1850.0, 2024.0]
@@ -12,8 +16,8 @@ age_strata = [i[0] for i in agegroup_request]
 
 indicator_names = {
     "comp_size_susceptible": "Susceptible",
-    "comp_size_early latent": "Early latent",
-    "comp_size_late latent": "Late latent",
+    "comp_size_early_latent": "Early latent",
+    "comp_size_late_latent": "Late latent",
     "comp_size_infectious": "Infectious",
     "comp_size_recovered": "Recovered",
     "total_population": "Total population",

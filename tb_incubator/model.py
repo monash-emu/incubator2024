@@ -18,7 +18,6 @@ from tb_incubator.outputs import request_model_outputs
 project_paths = set_project_base_path("../tb_incubator")
 data_path = project_paths["DATA_PATH"]
 
-
 def build_model(
     compartments: List[str],
     latent_compartments: List[str],
@@ -55,14 +54,14 @@ def build_model(
 
     # Demographic transitions
     model.add_universal_death_flows(
-        "population death", Parameter("universal_death")
+        "population_death", Parameter("universal_death")
     )  # Placeholder to overwrite later
-    model.add_replacement_birth_flow("replacement birth", "susceptible")
+    model.add_replacement_birth_flow("replacement_birth", "susceptible")
 
     # TB natural history
-    model.add_death_flow("TB death", Parameter("death_rate"), "infectious")
+    model.add_death_flow("TB_death", Parameter("death_rate"), "infectious")
     model.add_transition_flow(
-        "self recovery", Parameter("self_recovery_rate"), "infectious", "recovered"
+        "self_recovery", Parameter("self_recovery_rate"), "infectious", "recovered"
     )
 
     ##Infection
@@ -97,7 +96,7 @@ def build_model(
     desc = (
         "We used the [summer framework](https://summer2.readthedocs.io/en/latest/) "
         "to construct a compartmental model of tuberculosis (TB) dynamics. "
-        f"The base model consists of {len(compartments)} compartments: {', '.join(compartments)}--"
+        f"The base model consists of {len(compartments)} compartments: {', '.join([comp.replace('_', ' ') for comp in compartments])}--"
         "with flows added to represent the transitions and interactions between compartments. "
         f"We stratified the model based on {len(age_strata)} age groups: {', '.join(f'{start}-{end}' for start, end in agegroup_request)}. "
         "Age group-specific adjustments were applied for population death flows, latency flows, and infectiousness."
@@ -147,12 +146,10 @@ def get_age_strat(
 
 def add_latency_flow(model):
     latency_flows = [
-        ["stabilisation", "early latent", "late latent"],
-        ["early activation", "early latent", "infectious"],
-        ["late activation", "late latent", "infectious"],
+        ["stabilisation", "early_latent", "late_latent"],
+        ["early_activation", "early_latent", "infectious"],
+        ["late_activation", "late_latent", "infectious"],
     ]
-
-    # descriptions = []
 
     for flow, source, dest in latency_flows:
         model.add_transition_flow(flow, 1.0, source, dest)
@@ -162,15 +159,15 @@ def add_latency_flow(model):
 def add_infection_flow(model):
     infection_flows = [
         ["susceptible", None],
-        ["late latent", "rr_infection_latent"],
+        ["late_latent", "rr_infection_latent"],
         ["recovered", "rr_infection_recovered"],
     ]
 
     for origin, modifier in infection_flows:
         modifier = Parameter(modifier) if modifier else 1.0
         rate = Parameter("contact_rate") * modifier
-        name = f"infection from {origin}"
-        model.add_infection_frequency_flow(name, rate, origin, "early latent")
+        name = f"infection_from_{origin}"
+        model.add_infection_frequency_flow(name, rate, origin, "early_latent")
 
 
 def set_popdeath_adjs(age_strata: List[int], strat: AgeStratification):
@@ -182,7 +179,7 @@ def set_popdeath_adjs(age_strata: List[int], strat: AgeStratification):
         pop_death_func = get_sigmoidal_interpolation_function(years, rates)
         death_adjs[str(age)] = Overwrite(pop_death_func)
 
-    strat.set_flow_adjustments("population death", death_adjs)
+    strat.set_flow_adjustments("population_death", death_adjs)
 
 
 def set_latency_adjs(params: Dict[str, any], age_strata: List[int], strat: AgeStratification):
@@ -194,14 +191,13 @@ def set_latency_adjs(params: Dict[str, any], age_strata: List[int], strat: AgeSt
 
             adj = (
                 Parameter("progression_multiplier") * age_val
-                if "late activation" in flow_name
+                if "_activation" in flow_name
                 else age_val
             )
             adjs[str(age)] = adj
 
-    adjs = {k: Overwrite(v) for k, v in adjs.items()}
-    strat.set_flow_adjustments(flow_name, adjs)
-
+        adjs = {k: Overwrite(v) for k, v in adjs.items()}
+        strat.set_flow_adjustments(flow_name, adjs)
 
 def add_infectiousness_adjs(
     infectious_compartments: List[str],
@@ -221,7 +217,7 @@ def add_infectiousness_adjs(
             # Update the adjustments dictionary for the current age group.
             inf_adjs[str(age_low)] = Multiply(average_infectiousness)
 
-    strat.add_infectiousness_adjustments(comp, inf_adjs)
+        strat.add_infectiousness_adjustments(comp, inf_adjs)
 
 
 def seed_infectious(model: CompartmentalModel):

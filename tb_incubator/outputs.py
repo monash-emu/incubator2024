@@ -20,11 +20,11 @@ def request_model_outputs(
     model.request_output_for_compartments(
         "latent_population_size", latent_compartments, save_results=False
     )
-    percentage_latent = DerivedOutput("latent_population_size") / DerivedOutput("total_population")
-    model.request_function_output("percentage_latent", percentage_latent)
+    proportion_latent = DerivedOutput("latent_population_size") / DerivedOutput("total_population")
+    model.request_function_output("proportion_latent", proportion_latent)
 
     # death
-    model.request_output_for_flow("mortality_infectious", "TB death")
+    model.request_output_for_flow("mortality_infectious", "TB_death")
     model.request_function_output(
         "mortality",
         1e5 * DerivedOutput("mortality_infectious") / DerivedOutput("total_population"),
@@ -42,7 +42,7 @@ def request_model_outputs(
     # incidence
     for timing in ["early", "late"]:
         model.request_output_for_flow(
-            f"{timing}_activation", f"{timing} activation", save_results=False
+            f"{timing}_activation", f"{timing}_activation", save_results=False
         )
 
     model.request_aggregate_output(
