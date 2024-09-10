@@ -54,15 +54,13 @@ def build_model(
 
     # Demographic transitions
     model.add_universal_death_flows(
-        "population_death", Parameter("universal_death")
-    )  # Placeholder to overwrite later
+        "population_death", Parameter("universal_death"))  # Placeholder to overwrite later
     model.add_replacement_birth_flow("replacement_birth", "susceptible")
 
     # TB natural history
     model.add_death_flow("TB_death", Parameter("death_rate"), "infectious")
     model.add_transition_flow(
-        "self_recovery", Parameter("self_recovery_rate"), "infectious", "recovered"
-    )
+        "self_recovery", Parameter("self_recovery_rate"), "infectious", "recovered")
 
     ##Infection
     add_infection_flow(model)
