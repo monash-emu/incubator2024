@@ -1,5 +1,42 @@
 from tb_incubator.constants import image_path
 from IPython.display import display, SVG
+import plotly.express as px
+import numpy as np
+import pandas as pd
+
+def get_plot_param_checks(model, output, output_label, params, param_name, param_label, start_value, end_value, step_size):
+    test_params = {}
+    parameter_values = np.arange(start_value, end_value, step_size)
+    parameter_values = np.round(parameter_values, 2)
+    results = []
+
+    # Loop through the parameter values and run the model
+    for value in parameter_values:
+        test_params[f"{param_name}"] = value  
+
+        result = model.run(params | test_params)
+
+        outputs = model.get_derived_outputs_df()[[f"{output}"]]
+        outputs[f"{param_name}"] = value  # Add parameter value as a new column
+        results.append(outputs)
+
+    results_df = pd.concat(results)
+
+    # Correct labels and title formatting
+    fig = px.line(
+        results_df,
+        x=results_df.index,
+        y=f"{output}",
+        color=f"{param_name}",
+        labels={
+            f"{output}": f"{output_label}",
+            f"{param_name}": f"{param_label}"
+        },
+        title=f"{output_label} over time for different {param_label.lower()}"
+    )
+    
+    return fig
+
 
 def set_plot_label(plot, indicator_names, y_axis):
     for trace in plot.data:

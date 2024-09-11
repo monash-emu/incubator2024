@@ -1,9 +1,9 @@
 descriptions:
   start_population_size: "Start population size"
   age_infectiousness_switch: "Age infectiousness switch"
-  death_rate: "Crude death rate"
+  death_rate: "TB-specific death rate"
   universal_death: "All-cause mortality rate"
-  contact_rate: "Transmission scaling factor"
+  contact_rate: "Contact rate"
   self_recovery_rate: "Self-recovery rate"
   rr_infection_latent: "Relative risk of reinfection while latently infected (ref. infection-naive)"
   rr_infection_recovered: "Relative risk of reinfection after recovery (ref. infection-naive)"
@@ -21,7 +21,7 @@ value:
   age_infectiousness_switch: 15.0
   death_rate: 0.2
   universal_death: 0.1
-  contact_rate: 1.1
+  contact_rate: 5
   self_recovery_rate: 0.1
   rr_infection_latent: 0.5
   rr_infection_recovered: 0.2

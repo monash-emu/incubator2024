@@ -87,9 +87,7 @@ def build_model(
     )
 
     # Request model output
-    request_model_outputs(
-        model, compartments, latent_compartments, infectious_compartments, age_strata
-    )
+    request_model_outputs(model)
 
     desc = (
         "We used the [summer framework](https://summer2.readthedocs.io/en/latest/) "
@@ -188,7 +186,7 @@ def set_latency_adjs(params: Dict[str, any], age_strata: List[int], strat: AgeSt
             age_val = latency_params[param_age_bracket]
 
             adj = (
-                Parameter("progression_multiplier") * age_val
+                params["progression_multiplier"] * age_val
                 if "_activation" in flow_name
                 else age_val
             )
