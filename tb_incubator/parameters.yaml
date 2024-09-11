@@ -1,0 +1,84 @@
+descriptions:
+  start_population_size: "Start population size"
+  age_infectiousness_switch: "Age infectiousness switch"
+  death_rate: "TB-specific death rate"
+  universal_death: "All-cause mortality rate"
+  contact_rate: "Contact rate"
+  self_recovery_rate: "Self-recovery rate"
+  rr_infection_latent: "Relative risk of reinfection while latently infected (ref. infection-naive)"
+  rr_infection_recovered: "Relative risk of reinfection after recovery (ref. infection-naive)"
+  age_latency:
+    early_activation: "Rate of rapid progression to active TB, based on age groups"
+    late_activation: "Rate of late reactivation, based on age groups"
+    stabilisation: "Rate of stabilization from early to late latency, based on age groups"
+  progression_multiplier: "TB progression multiplier"
+  seed_time: "Seed time"
+  seed_duration: "Seed duration"
+  seed_rate: "Seed rate"
+  case_detection_rate: "Case detection rate"
+value:
+  start_population_size: 1.0
+  age_infectiousness_switch: 15.0
+  death_rate: 0.2
+  universal_death: 0.1
+  contact_rate: 5
+  self_recovery_rate: 0.1
+  rr_infection_latent: 0.5
+  rr_infection_recovered: 0.2
+  age_latency:
+    early_activation: 
+      0: 2.4
+      5: 2.0
+      15: 0.1
+      35: 0.1
+      50: 0.1
+    late_activation: 
+      0: 7.0e-09
+      5: 2.3e-03
+      15: 1.2e-03
+      35: 1.2e-03
+      50: 1.2e-03
+    stabilisation: 
+      0: 4.4
+      5: 4.4
+      15: 2.0
+      35: 2.0
+      50: 2.0
+  progression_multiplier : 1.9
+  seed_time: 1850.0
+  seed_duration: 1.0
+  seed_rate: 5.0
+  case_detection_rate: 1.0 #will be adjusted later
+unit:
+  start_population_size: "person"
+  age_infectiousness_switch: "years old"
+  death_rate: "per year"
+  universal_death: "per year"
+  contact_rate: "contacts per person per day"
+  self_recovery_rate: "per year"
+  rr_infection_latent:  ""
+  rr_infection_recovered: ""
+  age_latency:
+    early_activation: "per year"
+    late_activation: "per year"
+    stabilisation: "per year"
+  progression_multiplier: 
+  seed_time: ""
+  seed_duration: "days"
+  seed_rate: "persons per day"
+  case_detection_rate: "per year"
+sources:
+  start_population_size: "A value to avoid dividing by zero in the force of infection calculation"
+  age_infectiousness_switch: "Set based on duration of BCG protection [@ngupidop2016, @roy2019]"
+  death_rate: "United Nations Population Division data for Indonesia [@unwpp2024]"
+  universal_death: "United Nations Population Division data for Indonesia [@unwpp2024]"
+  contact_rate: "Arbitrary value selected from a parameter range published in a previous study [@ragonnet2022]"
+  self_recovery_rate: "Arbitrary value selected from a parameter range published in a previous study [@ragonnet2020]"
+  rr_infection_latent:  "Arbitrary value selected from a parameter range published in a previous study [@andrews2012]"
+  rr_infection_recovered: "Arbitrary value selected from a parameter range published in a previous study [@andrews2012]"
+  age_latency: "Arbitrary value selected from a parameter range published in a previous study [@ragonnet2017]"
+  progression_multiplier: "Arbitrary value selected from a parameter range published in a previous study [@ragonnet2022]"
+  seed_time: "Set based on an arbitrary value to model the epidemic"
+  seed_duration: "Set based on an arbitrary value to model the epidemic"
+  seed_rate: "Set based on an arbitrary value to model the epidemic"
+  case_detection_rate: "Arbitrary value"
