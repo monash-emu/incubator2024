@@ -18,7 +18,7 @@ def request_model_outputs(
     model.request_function_output("percentage_latent", latent_pop / tot_pop * 100.0)
 
     # death
-    deaths = model.request_output_for_flow("mortality_infectious", "TB death")
+    deaths = model.request_output_for_flow("mortality_infectious", "TB_death")
     model.request_function_output("mortality", 1e5 * deaths / tot_pop)
 
     # total prevalence
@@ -28,7 +28,7 @@ def request_model_outputs(
     # incidence
     for timing in ["early", "late"]:
         model.request_output_for_flow(
-            f"{timing}_activation", f"{timing} activation", save_results=False
+            f"{timing}_activation", f"{timing}_activation", save_results=False
         )
 
     inc_raw = model.request_aggregate_output(
