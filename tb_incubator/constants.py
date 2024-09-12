@@ -28,6 +28,7 @@ indicator_names = {
     "case_detection_rate": "Case detection rate",
     "case_notification_rate": "Case notification rate",
     "mortality": "TB deaths (per 100,000)",
+    "detection_rate": "Detection rate",
 }
 
 

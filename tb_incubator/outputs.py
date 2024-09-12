@@ -1,7 +1,9 @@
 from summer2 import CompartmentalModel
 from typing import List
-from summer2.parameters import Parameter, DerivedOutput
+from summer2.parameters import Parameter, DerivedOutput, Function, Time
 from tb_incubator.constants import latent_compartments, infectious_compartments, age_strata
+from tb_incubator.utils import tanh_based_scaleup
+from summer2.functions.time import get_linear_interpolation_function
 
 def request_model_outputs(
     model: CompartmentalModel,
@@ -52,3 +54,16 @@ def request_model_outputs(
             compartments,
             strata={"age": str(age_stratum)},
         )
+
+    # Detection rate
+    detection_func = Function(tanh_based_scaleup,
+                          [
+                              Time,
+                              Parameter("screening_scaleup_shape"),
+                              Parameter("screening_inflection_time"),
+                              0.0,
+                              1.0 / Parameter("time_to_screening_end_asymp")
+                          ])
+
+    model.add_computed_value_func("detection_rate", detection_func)
+    model.request_computed_value_output("detection_rate")

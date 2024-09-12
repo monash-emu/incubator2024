@@ -12,7 +12,7 @@ from tb_incubator.constants import (
     age_strata,
     agegroup_request,
 )
-from tb_incubator.utils import get_average_sigmoid, triangle_wave_func
+from tb_incubator.utils import get_average_sigmoid, tanh_based_scaleup, triangle_wave_func
 from tb_incubator.outputs import request_model_outputs
 
 project_paths = set_project_base_path("../tb_incubator")
@@ -56,6 +56,18 @@ def build_model(
     model.add_universal_death_flows(
         "population_death", Parameter("universal_death"))  # Placeholder to overwrite later
     model.add_replacement_birth_flow("replacement_birth", "susceptible")
+
+    # Detection
+    detection_func = Function(tanh_based_scaleup,
+                        [
+                            Time,
+                            Parameter("screening_scaleup_shape"),
+                            Parameter("screening_inflection_time"),
+                            0.0,
+                            1.0 / Parameter("time_to_screening_end_asymp")
+                        ])
+    
+    model.add_transition_flow("detection", detection_func, "infectious", "recovered")
 
     # TB natural history
     model.add_death_flow("TB_death", Parameter("death_rate"), "infectious")

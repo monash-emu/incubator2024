@@ -16,12 +16,16 @@ descriptions:
   seed_duration: "Seed duration"
   seed_rate: "Seed rate"
   case_detection_rate: "Case detection rate"
+  screening_scaleup_shape: "Passive screening shape"
+  screening_inflection_time: "Passive screening inflection time"
+  time_to_screening_end_asymp: "Time from active TB to be screened"
+  detection_reduction: "Relative reduction of screening rate during COVID-19"
 value:
   start_population_size: 1.0
   age_infectiousness_switch: 15.0
   death_rate: 0.1
   universal_death: 1.0
-  contact_rate: 3
+  contact_rate: 3.0
   self_recovery_rate: 0.1
   rr_infection_latent: 0.5
   rr_infection_recovered: 0.2
@@ -49,6 +53,10 @@ value:
   seed_duration: 1.0
   seed_rate: 5.0
   case_detection_rate: 1.0 #will be adjusted later
+  screening_scaleup_shape: 0.08
+  screening_inflection_time: 2018
+  time_to_screening_end_asymp: 1.0
+  detection_reduction: 0.25
 unit:
   start_population_size: "person"
   age_infectiousness_switch: "years old"
@@ -67,6 +75,10 @@ unit:
   seed_duration: "days"
   seed_rate: "persons per day"
   case_detection_rate: "per year"
+  screening_scaleup_shape: " "
+  screening_inflection_time: " "
+  time_to_screening_end_asymp: " "
+  detection_reduction: " "
 sources:
   start_population_size: "A value to avoid dividing by zero in the force of infection calculation"
   age_infectiousness_switch: "Set based on duration of BCG protection [@ngupidop2016, @roy2019]"
@@ -82,3 +94,7 @@ sources:
   seed_duration: "Set based on an arbitrary value to model the epidemic"
   seed_rate: "Set based on an arbitrary value to model the epidemic"
   case_detection_rate: "Arbitrary value"
+  screening_scaleup_shape: "Arbitrary value"
+  screening_inflection_time: "Arbitrary value"
+  time_to_screening_end_asymp: "Arbitrary value"
+  detection_reduction: "Arbitrary value"
