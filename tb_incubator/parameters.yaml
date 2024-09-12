@@ -19,9 +19,9 @@ descriptions:
 value:
   start_population_size: 1.0
   age_infectiousness_switch: 15.0
-  death_rate: 0.2
-  universal_death: 0.1
-  contact_rate: 5
+  death_rate: 0.1
+  universal_death: 1.0
+  contact_rate: 3
   self_recovery_rate: 0.1
   rr_infection_latent: 0.5
   rr_infection_recovered: 0.2
