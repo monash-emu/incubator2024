@@ -40,9 +40,7 @@ def request_model_outputs(
     model.request_function_output("incidence", 1e5 * inc_raw / tot_pop)
 
     # notification
-    notifs = model.request_function_output(
-        "notification", DerivedOutput("incidence_raw") * Parameter("case_detection_rate")
-    )
+    notifs = model.request_output_for_flow("notification", "detection")
 
     # case notification rate:
     model.request_function_output("case_notification_rate", notifs / DerivedOutput("incidence_raw") * 100.0)

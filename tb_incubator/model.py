@@ -1,17 +1,9 @@
-import pandas as pd
 from typing import List, Dict
 from summer2 import Overwrite, AgeStratification, Multiply, CompartmentalModel
 from summer2.parameters import Parameter, Time, Function
 from summer2.functions.time import get_sigmoidal_interpolation_function
 from tb_incubator.input import get_death_rates, get_population_entry_rate
-from tb_incubator.constants import (
-    set_project_base_path,
-    compartments,
-    latent_compartments,
-    infectious_compartments,
-    age_strata,
-    agegroup_request,
-)
+from tb_incubator.constants import set_project_base_path, agegroup_request
 from tb_incubator.utils import get_average_sigmoid, tanh_based_scaleup, triangle_wave_func
 from tb_incubator.outputs import request_model_outputs
 
@@ -20,7 +12,7 @@ data_path = project_paths["DATA_PATH"]
 
 def build_model(
     compartments: List[str],
-    latent_compartments: List[str],
+    #latent_compartments: List[str],
     infectious_compartments: List[str],
     age_strata: List[int],
     params: Dict[str, any],
