@@ -1,12 +1,98 @@
 import pandas as pd
 from typing import List, Dict
-from tb_incubator.constants import set_project_base_path
+from tb_incubator.constants import set_project_base_path, project_path
 from summer2.functions.time import get_sigmoidal_interpolation_function
+import yaml as yml
 
 
 project_paths = set_project_base_path("../tb_incubator")
 data_path = project_paths["DATA_PATH"]
 
+def load_targets():
+    with open(project_path / "targets.yaml", "r") as file:
+        data = yml.safe_load(file)
+
+    processed_targets = {}
+
+    for key, value in data.items():
+        if isinstance(value, dict):
+            # Check if the value for each key is a list of three items
+            if all(isinstance(v, list) and len(v) == 3 for v in value.values()):
+                # Handle as [target, lower_bound, upper_bound]
+                target = pd.Series({k: v[0] for k, v in value.items()})
+                lower_bound = pd.Series({k: v[1] for k, v in value.items()})
+                upper_bound = pd.Series({k: v[2] for k, v in value.items()})
+
+                processed_targets[f'{key}_target'] = target
+                processed_targets[f'{key}_lower_bound'] = lower_bound
+                processed_targets[f'{key}_upper_bound'] = upper_bound
+            else:
+                # Handle as single values
+                processed_targets[key] = pd.Series(value)
+        else:
+            # Handle cases where value is not a dictionary
+            processed_targets[key] = pd.Series(value)
+
+    return processed_targets
+
+def load_param_info() -> pd.DataFrame:
+    """
+    Load specific parameter information from a ridigly formatted yaml file, and crash otherwise.
+
+    Returns:
+        The parameters info DataFrame contains the following fields:
+            value: Enough parameter values to ensure model runs, may be over-written in calibration
+            descriptions: A brief reader-digestible name/description for the parameter
+            units: The unit of measurement for the quantity (empty string if dimensionless)
+            evidence: TeX-formatted full description of the evidence underpinning the choice of value
+            abbreviations: Short names for parameters, e.g. for some plots
+    """
+    with open(project_path / "parameters.yaml", "r") as param_file:
+        param_info = yml.safe_load(param_file)
+
+    # Check each loaded set of keys (parameter names) are the same as the arbitrarily chosen first key
+    first_key_set = param_info[list(param_info.keys())[0]].keys()
+    for cat in param_info:
+        working_keys = param_info[cat].keys()
+        if working_keys != first_key_set:
+            msg = f"Keys to {cat} category: {working_keys} - do not match first category {first_key_set}"
+            raise ValueError(msg)
+
+    return param_info
+
+
+def get_param_table(param_info):
+    """
+    Get parameter info in a tidy pd.Dataframe format.
+    """
+    param_table = []
+    for key in param_info["value"]:
+        if isinstance(param_info["value"][key], dict):
+            if key in param_info["unit"]:
+                for subkey, value in param_info["value"][key].items():
+                    value_str = "/".join(f"{k}: {v}" for k, v in value.items())
+                    param_table.append(
+                        {
+                            "Parameter": f"{param_info['descriptions'][key][subkey]}",
+                            "Value": value_str,
+                            "Unit": param_info["unit"][key][subkey],
+                            "Source": param_info["sources"][key],
+                        }
+                    )
+        else:
+            param_table.append(
+                {
+                    "Parameter": param_info["descriptions"][key],
+                    "Value": param_info["value"][key],
+                    "Unit": param_info["unit"][key],
+                    "Source": param_info["sources"][key],
+                }
+            )
+
+    fixed_param_table = pd.DataFrame(param_table)
+    fixed_param_table = fixed_param_table.set_index("Parameter")
+
+    return fixed_param_table
 
 def get_age_groups_in_range(age_groups, lower_limit, upper_limit):
     """
