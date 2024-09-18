@@ -15,7 +15,7 @@ def request_model_outputs(
         model.request_output_for_compartments(f"comp_size_{c}", c)
 
     # calculate and request percentage of latent population
-    tot_pop = model.request_output_for_compartments("total_population", compartments, save_results=False)
+    tot_pop = model.request_output_for_compartments("total_population", compartments, save_results=True)
     latent_pop = model.request_output_for_compartments("latent_pop_size", latent_compartments, save_results=False)
     model.request_function_output("percentage_latent", latent_pop / tot_pop * 100.0)
 
@@ -42,26 +42,6 @@ def request_model_outputs(
     # notification
     notifs = model.request_output_for_flow("notification", "detection")
 
-    # case notification rate:
-    model.request_function_output("case_notification_rate", notifs / DerivedOutput("incidence_raw") * 100.0)
+    # notification per incidence:
+    model.request_function_output("notification_per_incidence", notifs / DerivedOutput("incidence_raw") * 100.0)
 
-    # request total population by age stratum
-    for age_stratum in age_strata:
-        model.request_output_for_compartments(
-            f"total_populationXage_{age_stratum}",
-            compartments,
-            strata={"age": str(age_stratum)},
-        )
-
-    # Detection rate
-    detection_func = Function(tanh_based_scaleup,
-                          [
-                              Time,
-                              Parameter("screening_scaleup_shape"),
-                              Parameter("screening_inflection_time"),
-                              0.0,
-                              1.0 / Parameter("time_to_screening_end_asymp")
-                          ])
-
-    model.add_computed_value_func("detection_rate", detection_func)
-    model.request_computed_value_output("detection_rate")
