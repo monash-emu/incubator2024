@@ -50,8 +50,8 @@ value:
       50: 2.0
   progression_multiplier : 1.9
   seed_time: 1850.0
-  seed_duration: 1.0
-  seed_rate: 5.0
+  seed_duration: 15.0
+  seed_rate: 90.0
   case_detection_rate: 1.0 #will be adjusted later
   screening_scaleup_shape: 0.08
   screening_inflection_time: 2018
