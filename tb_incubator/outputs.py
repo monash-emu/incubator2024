@@ -1,7 +1,7 @@
 from summer2 import CompartmentalModel
+from typing import List
 from summer2.parameters import DerivedOutput
 from tb_incubator.constants import latent_compartments, infectious_compartments
-
 
 def request_model_outputs(
     model: CompartmentalModel,

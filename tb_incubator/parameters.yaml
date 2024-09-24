@@ -15,7 +15,6 @@ descriptions:
   seed_time: "Seed time"
   seed_duration: "Seed duration"
   seed_rate: "Seed rate"
-  case_detection_rate: "Case detection rate"
   screening_scaleup_shape: "Passive screening shape"
   screening_inflection_time: "Passive screening inflection time"
   time_to_screening_end_asymp: "Time from active TB to be screened"
@@ -52,11 +51,11 @@ value:
   seed_time: 1850.0
   seed_duration: 15.0
   seed_rate: 90.0
-  case_detection_rate: 1.0 #will be adjusted later
   screening_scaleup_shape: 0.08
   screening_inflection_time: 2018
   time_to_screening_end_asymp: 1.0
   detection_reduction: 0.25
+
 unit:
   start_population_size: "person"
   age_infectiousness_switch: "years old"
@@ -74,7 +73,6 @@ unit:
   seed_time: ""
   seed_duration: "days"
   seed_rate: "persons per day"
-  case_detection_rate: "per year"
   screening_scaleup_shape: " "
   screening_inflection_time: " "
   time_to_screening_end_asymp: " "
@@ -84,17 +82,16 @@ sources:
   age_infectiousness_switch: "Set based on duration of BCG protection [@ngupidop2016, @roy2019]"
   death_rate: "United Nations Population Division data for Indonesia [@unwpp2024]"
   universal_death: "United Nations Population Division data for Indonesia [@unwpp2024]"
-  contact_rate: "Arbitrary value selected from a parameter range published in a previous study [@ragonnet2022]"
-  self_recovery_rate: "Arbitrary value selected from a parameter range published in a previous study [@ragonnet2020]"
-  rr_infection_latent:  "Arbitrary value selected from a parameter range published in a previous study [@andrews2012]"
-  rr_infection_recovered: "Arbitrary value selected from a parameter range published in a previous study [@andrews2012]"
+  contact_rate: "Fitted [@ragonnet2022]"
+  self_recovery_rate: "Fitted [@ragonnet2020]"
+  rr_infection_latent:  "Fitted [@andrews2012]"
+  rr_infection_recovered: "Fitted [@andrews2012]"
   age_latency: "Arbitrary value selected from a parameter range published in a previous study [@ragonnet2017]"
   progression_multiplier: "Arbitrary value selected from a parameter range published in a previous study [@ragonnet2022]"
-  seed_time: "Set based on an arbitrary value to model the epidemic"
-  seed_duration: "Set based on an arbitrary value to model the epidemic"
-  seed_rate: "Set based on an arbitrary value to model the epidemic"
-  case_detection_rate: "Arbitrary value"
-  screening_scaleup_shape: "Arbitrary value"
-  screening_inflection_time: "Arbitrary value"
-  time_to_screening_end_asymp: "Arbitrary value"
-  detection_reduction: "Arbitrary value"
+  seed_time: "Fitted"
+  seed_duration: "Fitted"
+  seed_rate: "Fitted"
+  screening_scaleup_shape: "Fitted"
+  screening_inflection_time: "Fitted"
+  time_to_screening_end_asymp: "Fitted"
+  detection_reduction: "Fitted"
