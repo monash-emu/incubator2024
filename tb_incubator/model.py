@@ -7,6 +7,7 @@ from tb_incubator.constants import set_project_base_path, agegroup_request
 from tb_incubator.utils import get_average_sigmoid, tanh_based_scaleup, triangle_wave_func
 from tb_incubator.outputs import request_model_outputs
 
+
 project_paths = set_project_base_path("../tb_incubator")
 data_path = project_paths["DATA_PATH"]
 
@@ -59,17 +60,23 @@ def build_model(
                             1.0 / Parameter("time_to_screening_end_asymp")
                         ])
     
-    model.add_transition_flow("detection", detection_func, "infectious", "recovered")
 
     # TB natural history
-    model.add_death_flow("TB_death", Parameter("death_rate"), "infectious")
-    model.add_transition_flow(
-        "self_recovery", Parameter("self_recovery_rate"), "infectious", "recovered")
+    
+    for source in infectious_compartments:
+        model.add_death_flow("TB_death", Parameter("death_rate"), source)
+    
+    for source in infectious_compartments:
+        model.add_transition_flow("self_recovery", Parameter("self_recovery_rate"), source, "recovered")
 
-    ##Infection
+    model.add_transition_flow("detection", Parameter("algorithm_sensitivity") * detection_func, "infectious", "recovered")
+
+    model.add_transition_flow("missing", (1.0-Parameter("algorithm_sensitivity")) * detection_func, "infectious", "missed")
+
+    # Infection 
     add_infection_flow(model)
 
-    ## Latency
+    # Latency
     add_latency_flow(model)
 
     # Age-stratification

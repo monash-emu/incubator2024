@@ -19,6 +19,8 @@ descriptions:
   screening_inflection_time: "Passive screening inflection time"
   time_to_screening_end_asymp: "Time from active TB to be screened"
   detection_reduction: "Relative reduction of screening rate during COVID-19"
+  algorithm_sensitivity: "Sensitivity of the diagnostic tool"
+  self_recovery_rate: "Self-recovery rate"
 value:
   start_population_size: 1.0
   age_infectiousness_switch: 15.0
@@ -55,7 +57,8 @@ value:
   screening_inflection_time: 2018
   time_to_screening_end_asymp: 1.0
   detection_reduction: 0.25
-
+  algorithm_sensitivity: 0.8
+  self_recovery_rate: 0.3
 unit:
   start_population_size: "person"
   age_infectiousness_switch: "years old"
@@ -77,6 +80,8 @@ unit:
   screening_inflection_time: " "
   time_to_screening_end_asymp: " "
   detection_reduction: " "
+  algorithm_sensitivity: " "
+  self_recovery_rate: " "
 sources:
   start_population_size: "A value to avoid dividing by zero in the force of infection calculation"
   age_infectiousness_switch: "Set based on duration of BCG protection [@ngupidop2016, @roy2019]"
@@ -95,3 +100,5 @@ sources:
   screening_inflection_time: "Fitted"
   time_to_screening_end_asymp: "Fitted"
   detection_reduction: "Fitted"
+  algorithm_sensitivity: "Fitted"
+  self_recovery_rate: "Fitted"

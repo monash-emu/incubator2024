@@ -4,10 +4,11 @@ compartments = ["susceptible",
                 "early_latent", 
                 "late_latent", 
                 "infectious", 
-                "recovered"]
+                "recovered",
+                "missed"]
 
 latent_compartments = ["early_latent", "late_latent"]
-infectious_compartments = ["infectious"]
+infectious_compartments = ["infectious", "missed"]
 
 model_times = [1850.0, 2024.0]
 
