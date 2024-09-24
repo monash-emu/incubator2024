@@ -60,6 +60,9 @@ def build_model(
                             1.0 / Parameter("time_to_screening_end_asymp")
                         ])
     
+    model.add_transition_flow("detection", Parameter("algorithm_sensitivity") * detection_func, "infectious", "recovered")
+
+    model.add_transition_flow("missing", (1.0-Parameter("algorithm_sensitivity")) * detection_func, "infectious", "missed")
 
     # TB natural history
     
@@ -69,9 +72,7 @@ def build_model(
     for source in infectious_compartments:
         model.add_transition_flow("self_recovery", Parameter("self_recovery_rate"), source, "recovered")
 
-    model.add_transition_flow("detection", Parameter("algorithm_sensitivity") * detection_func, "infectious", "recovered")
 
-    model.add_transition_flow("missing", (1.0-Parameter("algorithm_sensitivity")) * detection_func, "infectious", "missed")
 
     # Infection 
     add_infection_flow(model)

@@ -28,8 +28,8 @@ value:
   universal_death: 1.0
   contact_rate: 3.0
   self_recovery_rate: 0.1
-  rr_infection_latent: 0.5
-  rr_infection_recovered: 0.2
+  rr_infection_latent: 0.22546265454503972
+  rr_infection_recovered: 0.22546265454503972
   age_latency:
     early_activation: 
       0: 2.4
@@ -50,15 +50,15 @@ value:
       35: 2.0
       50: 2.0
   progression_multiplier : 1.9
-  seed_time: 1850.0
-  seed_duration: 15.0
-  seed_rate: 90.0
+  seed_time: 1861.7859642898875
+  seed_duration: 16.132247516347878
+  seed_rate: 84.92570070574625
   screening_scaleup_shape: 0.08
-  screening_inflection_time: 2018
+  screening_inflection_time: 2010
   time_to_screening_end_asymp: 1.0
   detection_reduction: 0.25
-  algorithm_sensitivity: 0.8
-  self_recovery_rate: 0.3
+  algorithm_sensitivity: 0.9474468876902681
+  self_recovery_rate: 0.1
 unit:
   start_population_size: "person"
   age_infectiousness_switch: "years old"
