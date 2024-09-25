@@ -10,7 +10,7 @@ compartments = ["susceptible",
 latent_compartments = ["early_latent", "late_latent"]
 infectious_compartments = ["infectious", "missed"]
 
-model_times = [1850.0, 2024.0]
+model_times = [1820.0, 2024.0]
 
 agegroup_request = [[0, 4], [5, 14], [15, 34], [35, 49], [50, 100]]
 age_strata = [i[0] for i in agegroup_request]
@@ -21,6 +21,7 @@ indicator_names = {
     "comp_size_late_latent": "Late latent",
     "comp_size_infectious": "Infectious",
     "comp_size_recovered": "Recovered",
+    "comp_size_missed": "Missed",
     "total_population": "Total population",
     "notification": "TB notifications",
     "incidence": "TB incidence (per 100,000)",

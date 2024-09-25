@@ -2,7 +2,7 @@ from typing import List, Dict
 from summer2 import Overwrite, AgeStratification, Multiply, CompartmentalModel
 from summer2.parameters import Parameter, Time, Function
 from summer2.functions.time import get_sigmoidal_interpolation_function
-from tb_incubator.input import get_death_rates, get_population_entry_rate
+from tb_incubator.input import get_death_rates, get_population_entry_rate, load_genexpert_util, load_genexpert_conf_cases
 from tb_incubator.constants import set_project_base_path, agegroup_request
 from tb_incubator.utils import get_average_sigmoid, tanh_based_scaleup, triangle_wave_func
 from tb_incubator.outputs import request_model_outputs
@@ -51,18 +51,25 @@ def build_model(
     model.add_replacement_birth_flow("replacement_birth", "susceptible")
 
     # Detection
-    detection_func = Function(tanh_based_scaleup,
-                        [
-                            Time,
-                            Parameter("screening_scaleup_shape"),
-                            Parameter("screening_inflection_time"),
-                            0.0,
-                            1.0 / Parameter("time_to_screening_end_asymp")
-                        ])
-    
-    model.add_transition_flow("detection", Parameter("algorithm_sensitivity") * detection_func, "infectious", "recovered")
+    detection_func = Function(
+        tanh_based_scaleup,
+        [
+            Time,
+            Parameter("screening_scaleup_shape"),
+            Parameter("screening_inflection_time"),
+            0.0,
+            1.0 / Parameter("time_to_screening_end_asymp")
+        ]
+    )
 
-    model.add_transition_flow("missing", (1.0-Parameter("algorithm_sensitivity")) * detection_func, "infectious", "missed")
+    utilisation = load_genexpert_util()
+    genexpert_util = get_sigmoidal_interpolation_function(utilisation.index, utilisation)
+    genexpert_improvement = (1.0 - Parameter("base_sensitivity")) * Parameter("genexpert_sensitivity") * genexpert_util
+    sensitivity = Parameter("base_sensitivity") + genexpert_improvement
+    
+    model.add_transition_flow("detection", sensitivity * detection_func, "infectious", "recovered")
+
+    model.add_transition_flow("missing", (1.0-sensitivity) * detection_func, "infectious", "missed")
 
     # TB natural history
     
@@ -71,7 +78,6 @@ def build_model(
     
     for source in infectious_compartments:
         model.add_transition_flow("self_recovery", Parameter("self_recovery_rate"), source, "recovered")
-
 
 
     # Infection 
@@ -198,7 +204,7 @@ def set_latency_adjs(params: Dict[str, any], age_strata: List[int], strat: AgeSt
             age_val = latency_params[param_age_bracket]
 
             adj = (
-                params["progression_multiplier"] * age_val
+                Parameter("progression_multiplier") * age_val
                 if "_activation" in flow_name
                 else age_val
             )

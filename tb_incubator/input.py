@@ -8,6 +8,16 @@ import yaml as yml
 project_paths = set_project_base_path("../tb_incubator")
 data_path = project_paths["DATA_PATH"]
 
+def load_genexpert_conf_cases():
+    targets = load_targets()
+
+    return targets["cases_conf_genexpert"]
+
+def load_genexpert_util():
+    targets = load_targets()
+
+    return targets["genexpert_utilisation"]
+
 def load_targets():
     with open(project_path / "targets.yaml", "r") as file:
         data = yml.safe_load(file)
