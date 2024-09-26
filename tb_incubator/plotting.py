@@ -13,7 +13,7 @@ def plot_model_vs_actual(
     modeled_column: str,
     y_axis_title: str,
     plot_title: str,
-    actual_data: str,
+    actual_data_label: str,
     actual_color: str = "red",
 ):
     """
@@ -42,7 +42,7 @@ def plot_model_vs_actual(
         y=actual_series.values,
         mode="markers",
         marker=dict(color=actual_color),
-        name=actual_data,
+        name=actual_data_label,
     )
 
     # Combine the traces into one figure
