@@ -426,7 +426,7 @@ def get_death_rates():
     return death_rates, description
 
 
-def get_population_entry_rate(model_start_period):
+def get_population_entry_rate(model_times):
     """
     Calculates the population entry rates based on total population data over the years.
 
@@ -444,7 +444,7 @@ def get_population_entry_rate(model_start_period):
     pop_data, description = get_pop_death_data()
     total_pop_by_year = pop_data.groupby("year")["population"].sum()
     pop_start_year = total_pop_by_year.index[0]
-    start_period = pop_start_year - model_start_period
+    start_period = pop_start_year - model_times[0]
 
     # Calculate population entry rates and convert to function
     pop_entry = total_pop_by_year.diff().dropna()  # Note this will only work if data are annual

@@ -2,8 +2,9 @@ from typing import List, Dict
 from summer2 import Overwrite, AgeStratification, Multiply, CompartmentalModel
 from summer2.parameters import Parameter, Time, Function
 from summer2.functions.time import get_sigmoidal_interpolation_function
-from tb_incubator.input import get_death_rates, get_population_entry_rate, load_genexpert_util, load_genexpert_conf_cases
-from tb_incubator.constants import set_project_base_path, agegroup_request
+from tb_incubator.input import get_death_rates, get_population_entry_rate, load_genexpert_util
+import tb_incubator.constants as const
+from tb_incubator.constants import set_project_base_path
 from tb_incubator.utils import get_average_sigmoid, tanh_based_scaleup, triangle_wave_func
 from tb_incubator.outputs import request_model_outputs
 
@@ -11,24 +12,19 @@ from tb_incubator.outputs import request_model_outputs
 project_paths = set_project_base_path("../tb_incubator")
 data_path = project_paths["DATA_PATH"]
 
-def build_model(
-    compartments: List[str],
-    #latent_compartments: List[str],
-    infectious_compartments: List[str],
-    age_strata: List[int],
-    params: Dict[str, any],
-    model_times: List[int],
-) -> CompartmentalModel:
+compartments = const.compartments
+infectious_compartments = const.infectious_compartments
+age_strata = const.age_strata
+model_times = const.model_times
+agegroup_request = const.agegroup_request
+
+def build_model(params: Dict[str, any]) -> CompartmentalModel:
     """
     Builds and returns a compartmental model for epidemiological studies, incorporating
     various flows and stratifications based on age.
 
     Args:
-        compartments: List of compartment names in the model.
-        infectious_compartments: List of infectious compartment names.
-        age_strata: List of age groups for stratification.
         params: Dictionary of parameters with fixed values.
-        model_times: List of start and end periods of the model
 
     Returns:
         A configured CompartmentalModel object.
@@ -68,7 +64,6 @@ def build_model(
     sensitivity = Parameter("base_sensitivity") + genexpert_improvement
     
     model.add_transition_flow("detection", sensitivity * detection_func, "infectious", "recovered")
-
     model.add_transition_flow("missing", (1.0-sensitivity) * detection_func, "infectious", "missed")
 
     # TB natural history
@@ -87,16 +82,11 @@ def build_model(
     add_latency_flow(model)
 
     # Age-stratification
-    strat = get_age_strat(
-        compartments,
-        infectious_compartments,
-        age_strata,
-        params,
-    )
+    strat = get_age_strat(params)
     model.stratify_with(strat)
 
     # Calculate population entry rates
-    entry_rate, description = get_population_entry_rate(1850)
+    entry_rate, description = get_population_entry_rate(model_times)
 
     # Add births as additional entry rate
     # (split imports in case the susceptible compartments are further stratified later)
@@ -120,23 +110,14 @@ def build_model(
 
 
 # Age stratification
-def get_age_strat(
-    compartments: List[str],
-    infectious_compartments: List[str],
-    age_strata: List[int],
-    params: Dict[str, any],
-) -> AgeStratification:
+def get_age_strat(params: Dict[str, any]) -> AgeStratification:
     """
     Creates and configures an age stratification for a compartmental model.
 
     Args:
-        compartments: A list of the names of all compartments in the model.
-        infectious: A list of the names of infectious compartments in the model.
-        age_strata: A list of age strata (as integers) for the model.
-        death_df: A DataFrame containing death rates by age.
-        fixed_params: A dictionary of fixed parameters for the model, which includes
-                      keys for age-specific latency adjustments, infectiousness switch ages,
-                      and parameters for BCG effects and treatment outcomes.
+        params: A dictionary of fixed parameters for the model, which includes
+                keys for age-specific latency adjustments, infectiousness switch ages,
+                and parameters for BCG effects and treatment outcomes.
 
     Returns:
         AgeStratification: An object representing the configured age stratification for the model.
