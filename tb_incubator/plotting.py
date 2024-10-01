@@ -103,7 +103,7 @@ def set_plot_label(plot, indicator_names, y_axis):
                 hovertemplate=trace.hovertemplate.replace(trace.name, new_name),
             )
         else:
-            print(f"Warning: No indicator name found for trace '{trace.name}'")
+            print(f"")
 
     # update layour for y-axis title
     plot.update_layout(

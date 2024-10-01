@@ -29,10 +29,26 @@ def build_model(params: Dict[str, any]) -> CompartmentalModel:
     Returns:
         A configured CompartmentalModel object.
     """
+    desc  = []
+
     model = CompartmentalModel(
         times=model_times,
         compartments=compartments,
         infectious_compartments=infectious_compartments,
+    )
+
+    desc.append(
+        "We used the [summer framework](https://summer2.readthedocs.io/en/latest/) "
+        "to construct a compartmental model of tuberculosis (TB) dynamics. "
+        f"The base model consists of {len(compartments)} compartments: {', '.join([comp.replace('_', ' ') for comp in compartments])}--"
+        "with flows added to represent the transitions and interactions between compartments. "
+        "The susceptible (S) compartment includes individuals who have never had TB and are at risk "
+        "of being infected by Mycobacterium tuberculosis. "
+        "Latent TB infection is modelled using two compartments: early latent (E) and late latent (L). "
+        "Latently infected individuals who progress to active TB move to the infectious (I) compartment. "
+        "Those who recover through self-recovery are transferred to the recovery (R) compartment. "
+        "We also account for under-reporting by modelling transitions of some individuals from the infectious (I)"
+        " compartment to the missed (M) compartment.\n\n"
     )
 
     # Set initial population
@@ -41,10 +57,28 @@ def build_model(params: Dict[str, any]) -> CompartmentalModel:
     # Seed infectious individuals
     seed_infectious(model)
 
+    desc.append(
+        f"Our model predicts the TB dynamics from {model_times[0]} to {model_times[1]}. "
+        f"We mostly used estimates from previous study [@ragonnet2022] to inform TB progression "
+        "and natural history of TB. "
+        "We also fitted some parameters to local data on TB notifications [@whotb2023] and prevalence [@indoprevsurv2015], while "
+        "considering uncertainty around TB progression parameters (see table below). "
+        "Initially, we introduce a small number of population and seed infectious individuals to the model. "
+    )
+
     # Demographic transitions
     model.add_universal_death_flows(
         "population_death", Parameter("universal_death"))  # Placeholder to overwrite later
     model.add_replacement_birth_flow("replacement_birth", "susceptible")
+
+    desc.append(
+        "Births are modelled using a time-variant function of the population entry rate. "
+        "The entry rate was calculated by dividing the yearly population difference by the duration of the run-in period. "
+        "Time-varying and age-specific non-TB-related mortality was applied to all compartments to represent deaths from "
+        "non-TB causes. Estimates from the United Nations’ World Population Prospects [@unwpp2024] were used as reference data. "
+        "We also assume that the population is closed, where the number of births replaces "
+        "the total number of deaths each year. \n\n"
+    )
 
     # Detection
     detection_func = Function(
@@ -66,6 +100,20 @@ def build_model(params: Dict[str, any]) -> CompartmentalModel:
     model.add_transition_flow("detection", sensitivity * detection_func, "infectious", "recovered")
     model.add_transition_flow("missing", (1.0-sensitivity) * detection_func, "infectious", "missed")
 
+    desc.append(
+        "The detection rate refers to the progression of individuals with active TB (I) "
+        "to the recovered (R) compartment, based on the assumption that detected individuals receive "
+        "immediate treatment upon diagnosis, leading to their recovery. "
+        "Furthermore, we implement changes in the diagnostic algorithm to model the improved "
+        "diagnostic test (GeneXpert) utilisation. "
+        "We assume that utilisation is proportional to the number of confirmed cases identified by GeneXpert. "
+        "To inform the time-variant proportion of utilisation, we use Indonesia's Ministry of Health GeneXpert utilisation data from 2016 to 2022 [@moh2022]. "
+        "This proportion is multiplied by the diagnostic sensitivity and the potential improvement "
+        "in sensitivity to reflect the enhancements of the diagnostic test. The calculated improvement in diagnostic "
+        "sensitivity is then applied to the following year's data. On the other hand, the flow of under-reporting, "
+        "or “missing” TB cases, refers to the potential sensitivity bias multiplied by the detection function.  \n\n"
+    )
+
     # TB natural history
     
     for source in infectious_compartments:
@@ -74,16 +122,33 @@ def build_model(params: Dict[str, any]) -> CompartmentalModel:
     for source in infectious_compartments:
         model.add_transition_flow("self_recovery", Parameter("self_recovery_rate"), source, "recovered")
 
-
     # Infection 
     add_infection_flow(model)
+
+    desc.append(
+        "We use estimates reported in a previous study [@ragonnet2022] for TB-specific mortality, self-recovery rate, and "
+        "age-specific infectiousness to inform the TB dynamics. "
+        "Reinfection was illustrated in two different ways: "
+        "flows from late latent (L) to early latent compartment (E) and "
+        "from individuals who have recovered from TB (R) to early latent. "
+        "Both pathways can be adjusted to reflect different reinfection risks compared to infection-naïve individuals."
+    )
 
     # Latency
     add_latency_flow(model)
 
+    desc.append(
+        "Progression flows from latent compartments to infectious compartment are also implemented to model the progression from individuals "
+        "with latent infection to active TB. "
+    )
+
     # Age-stratification
     strat = get_age_strat(params)
     model.stratify_with(strat)
+    desc.append(
+        f"We stratified the model based on {len(age_strata)} age groups: {', '.join(f'{start}-{end}' for start, end in agegroup_request)}. "
+        "Age group-specific adjustments were applied for population death flows, latency flows, and infectiousness."
+    )
 
     # Calculate population entry rates
     entry_rate, description = get_population_entry_rate(model_times)
@@ -97,16 +162,9 @@ def build_model(params: Dict[str, any]) -> CompartmentalModel:
     # Request model output
     request_model_outputs(model)
 
-    desc = (
-        "We used the [summer framework](https://summer2.readthedocs.io/en/latest/) "
-        "to construct a compartmental model of tuberculosis (TB) dynamics. "
-        f"The base model consists of {len(compartments)} compartments: {', '.join([comp.replace('_', ' ') for comp in compartments])}--"
-        "with flows added to represent the transitions and interactions between compartments. "
-        f"We stratified the model based on {len(age_strata)} age groups: {', '.join(f'{start}-{end}' for start, end in agegroup_request)}. "
-        "Age group-specific adjustments were applied for population death flows, latency flows, and infectiousness."
-    )
+    final_desc = "".join(desc)
 
-    return model, desc
+    return model, final_desc
 
 
 # Age stratification
