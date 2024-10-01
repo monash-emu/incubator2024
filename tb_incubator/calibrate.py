@@ -24,12 +24,7 @@ def get_bcm(params) -> BayesianCompartmentalModel:
       and fixed parameters, prior distributions for Bayesian inference, and target data for model
       validation or calibration.
     """
-    model, desc = build_model(
-        compartments,
-        infectious_compartments,
-        age_strata,
-        params,
-        model_times)
+    model, desc = build_model(params)
     priors = get_all_priors()
     targets = get_targets()
     
@@ -48,14 +43,14 @@ def get_all_priors() -> List:
         esp.UniformPrior("screening_scaleup_shape", (0.01, 0.5)),
         esp.UniformPrior("screening_inflection_time", (2000.0, 2018.0)),
         esp.UniformPrior("time_to_screening_end_asymp", (0.1, 20.0)),
-        #esp.UniformPrior("rr_infection_latent", (0.01, 1.0)),
-        #esp.UniformPrior("rr_infection_recovered", (0.01, 1.0)),
-        #esp.UniformPrior("seed_time", (1840.0, 1900.0)),
+        esp.UniformPrior("rr_infection_latent", (0.01, 1.0)),
+        esp.UniformPrior("rr_infection_recovered", (0.01, 1.0)),
+        esp.UniformPrior("seed_time", (1840.0, 1900.0)),
         #esp.UniformPrior("seed_duration", (1.0, 20.0)),
         #esp.UniformPrior("seed_rate", (1.0, 100.0)),
         esp.UniformPrior("base_sensitivity", (0.01, 1.0)),
         esp.UniformPrior("genexpert_sensitivity", (0.01, 1.0)),
-        esp.UniformPrior("progression_multiplier", (0.5, 1.5)),
+        esp.UniformPrior("progression_multiplier", (0.5, 1.5))
     ]
 
     return priors
