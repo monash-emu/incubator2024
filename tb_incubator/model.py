@@ -4,13 +4,8 @@ from summer2.parameters import Parameter, Time, Function
 from summer2.functions.time import get_sigmoidal_interpolation_function
 from tb_incubator.input import get_death_rates, get_population_entry_rate, load_genexpert_util
 import tb_incubator.constants as const
-from tb_incubator.constants import set_project_base_path
 from tb_incubator.utils import get_average_sigmoid, tanh_based_scaleup, triangle_wave_func
 from tb_incubator.outputs import request_model_outputs
-
-
-project_paths = set_project_base_path("../tb_incubator")
-data_path = project_paths["DATA_PATH"]
 
 compartments = const.compartments
 infectious_compartments = const.infectious_compartments
@@ -62,7 +57,7 @@ def build_model(params: Dict[str, any]) -> CompartmentalModel:
         f"We mostly used estimates from previous study [@ragonnet2022] to inform TB progression "
         "and natural history of TB. "
         "We also fitted some parameters to local data on TB notifications [@whotb2023] and prevalence [@indoprevsurv2015], while "
-        "considering uncertainty around TB progression parameters (see table below). "
+        "considering uncertainty around TB progression parameters (see @tbl-params). "
         "Initially, we introduce a small number of population and seed infectious individuals to the model. "
     )
 
@@ -107,9 +102,10 @@ def build_model(params: Dict[str, any]) -> CompartmentalModel:
         "Furthermore, we implement changes in the diagnostic algorithm to model the improved "
         "diagnostic test (GeneXpert) utilisation. "
         "We assume that utilisation is proportional to the number of confirmed cases identified by GeneXpert. "
-        "To inform the time-variant proportion of utilisation, we use Indonesia's Ministry of Health GeneXpert utilisation data from 2016 to 2022 [@moh2022]. "
-        "This proportion is multiplied by the diagnostic sensitivity and the potential improvement "
-        "in sensitivity to reflect the enhancements of the diagnostic test. The calculated improvement in diagnostic "
+        #"To inform the time-variant proportion of utilisation, we use Indonesia's Ministry of Health GeneXpert utilisation data from 2016 to 2022 [@moh2022]. "
+        #"This proportion is multiplied by the diagnostic sensitivity and the potential improvement "
+        #"in sensitivity to reflect the enhancements of the diagnostic test. "
+        "The calculated improvement in diagnostic "
         "sensitivity is then applied to the following year's data. On the other hand, the flow of under-reporting, "
         "or “missing” TB cases, refers to the potential sensitivity bias multiplied by the detection function.  \n\n"
     )
@@ -131,7 +127,7 @@ def build_model(params: Dict[str, any]) -> CompartmentalModel:
         "Reinfection was illustrated in two different ways: "
         "flows from late latent (L) to early latent compartment (E) and "
         "from individuals who have recovered from TB (R) to early latent. "
-        "Both pathways can be adjusted to reflect different reinfection risks compared to infection-naïve individuals."
+        "Both pathways can be adjusted to reflect different reinfection risks compared to infection-naïve individuals. "
     )
 
     # Latency

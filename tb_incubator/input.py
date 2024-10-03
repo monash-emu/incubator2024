@@ -1,12 +1,9 @@
 import pandas as pd
 from typing import List, Dict
-from tb_incubator.constants import set_project_base_path, project_path
+from tb_incubator.constants import project_path, data_path
 from summer2.functions.time import get_sigmoidal_interpolation_function
 import yaml as yml
 
-
-project_paths = set_project_base_path("../tb_incubator")
-data_path = project_paths["DATA_PATH"]
 
 def load_genexpert_conf_cases():
     targets = load_targets()
