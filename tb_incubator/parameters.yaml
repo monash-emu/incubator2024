@@ -2,7 +2,6 @@ descriptions:
   start_population_size: "Start population size"
   age_infectiousness_switch: "Age infectiousness switch"
   death_rate: "TB-specific death rate"
-  universal_death: "All-cause mortality rate"
   contact_rate: "Contact rate"
   self_recovery_rate: "Self-recovery rate"
   rr_infection_latent: "Relative risk of reinfection while latently infected (ref. infection-naive)"
@@ -24,7 +23,6 @@ value:
   start_population_size: 1.0
   age_infectiousness_switch: 15.0
   death_rate: 0.1
-  universal_death: 1.0
   contact_rate: 9.54
   self_recovery_rate: 0.29
   rr_infection_latent: 0.12
@@ -61,7 +59,6 @@ unit:
   start_population_size: "person"
   age_infectiousness_switch: "years old"
   death_rate: "per year"
-  universal_death: "per year"
   contact_rate: "contacts per person per day"
   self_recovery_rate: "per year"
   rr_infection_latent:  ""
@@ -83,7 +80,6 @@ sources:
   start_population_size: "A value to avoid dividing by zero in the force of infection calculation"
   age_infectiousness_switch: "Set based on duration of BCG protection [@ngupidop2016, @roy2019]"
   death_rate: "United Nations Population Division data for Indonesia [@unwpp2024]"
-  universal_death: "United Nations Population Division data for Indonesia [@unwpp2024]"
   contact_rate: "Fitted [@ragonnet2022]"
   self_recovery_rate: "Fitted [@ragonnet2020]"
   rr_infection_latent:  "Fitted [@andrews2012]"

@@ -62,8 +62,7 @@ def build_model(params: Dict[str, any]) -> CompartmentalModel:
     )
 
     # Demographic transitions
-    model.add_universal_death_flows(
-        "population_death", Parameter("universal_death"))  # Placeholder to overwrite later
+    model.add_universal_death_flows("population_death", 1.0)
     model.add_replacement_birth_flow("replacement_birth", "susceptible")
 
     desc.append(

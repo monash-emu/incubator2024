@@ -1,15 +1,11 @@
 import numpy as np
 from typing import List
-from tb_incubator.constants import compartments, infectious_compartments, model_times, age_strata
 from tb_incubator.model import build_model
-from tb_incubator.input import load_targets, load_param_info
+from tb_incubator.input import load_targets
 
 from estival import targets as est
 from estival import priors as esp
 from estival.model import BayesianCompartmentalModel
-
-import xarray as xr
-import arviz as az
 
 
 def get_bcm(params) -> BayesianCompartmentalModel:
