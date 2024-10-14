@@ -18,7 +18,7 @@ descriptions:
   screening_scaleup_shape: "Passive screening shape"
   screening_inflection_time: "Passive screening inflection time"
   time_to_screening_end_asymp: "Time from active TB to be screened"
-  base_sensitivity: "Preceding diagnostic algorithm sensitivity."
+  base_sensitivity: "Preceding diagnostic algorithm sensitivity"
   genexpert_sensitivity: "Diagnostic test sensitivity"
 value:
   start_population_size: 1.0

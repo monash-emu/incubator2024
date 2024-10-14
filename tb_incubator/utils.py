@@ -1,7 +1,23 @@
 from jax import numpy as jnp
 from math import log, exp
+import numpy as np
 
+def round_sigfig(value: float, sig_figs: int) -> float:
+    """
+    Round a number to a certain number of significant figures,
+    rather than decimal places.
 
+    Args:
+        value: Number to round
+        sig_figs: Number of significant figures to round to
+    """
+    if np.isinf(value):
+        return "infinity"
+    else:
+        return (
+            round(value, -int(np.floor(np.log10(value))) + (sig_figs - 1)) if value != 0.0 else 0.0
+        )
+    
 def tanh_based_scaleup(t, shape, inflection_time, start_asymptote, end_asymptote=1.0):
     """
     return the function t: (1 - sigma) / 2 * tanh(b * (a - c)) + (1 + sigma) / 2
