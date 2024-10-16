@@ -126,7 +126,7 @@ def get_all_priors() -> List:
         All the priors used under any analyses
     """
     priors = [
-        esp.UniformPrior("contact_rate", (8.0, 12.0)),
+        esp.UniformPrior("contact_rate", (7.0, 12.0)),
         esp.UniformPrior("self_recovery_rate", (0.1, 1.0)),
         #esp.UniformPrior("screening_scaleup_shape", (0.10, 0.5)),
         #esp.UniformPrior("screening_inflection_time", (1990.0, 2018.0)),
@@ -137,7 +137,7 @@ def get_all_priors() -> List:
         #esp.UniformPrior("seed_duration", (1.0, 20.0)),
         #esp.UniformPrior("seed_rate", (1.0, 100.0)),
         esp.UniformPrior("base_sensitivity", (0.1, 1.0)),
-        esp.UniformPrior("genexpert_sensitivity", (0.5, 1.1)),
+        esp.UniformPrior("genexpert_sensitivity", (0.2, 1.0)),
         esp.UniformPrior("progression_multiplier", (1.3, 1.7))
     ]
 
