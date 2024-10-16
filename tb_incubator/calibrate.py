@@ -44,7 +44,7 @@ def tabulate_calib_results(
         "Standard deviation",
         "ESS bulk",
         "ESS tail",
-        "\\textit{\^{R}}",
+        "$\\hat{R}$",
         "High-density interval",
     ]
     return table
