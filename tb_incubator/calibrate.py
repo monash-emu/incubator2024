@@ -2,8 +2,10 @@ import numpy as np
 import pandas as pd
 from typing import List
 from matplotlib import pyplot as plt
+from plotly.subplots import make_subplots
+import plotly.graph_objects as go
 
-from tb_incubator.utils import round_sigfig
+from tb_incubator.utils import round_sigfig, get_target_from_name
 from tb_incubator.model import build_model
 from tb_incubator.input import load_targets, load_param_info
 
@@ -13,6 +15,42 @@ from estival.model import BayesianCompartmentalModel
 
 import arviz as az
 from arviz.labels import MapLabeller
+
+def plot_spaghetti_calib_comparison(
+    spaghetti: pd.DataFrame,
+    out_req: List[str],
+) -> go.Figure:
+    """Plot model outputs and compare against targets where available.
+
+    Args:
+        spaghetti: Output of get_spaghetti
+        out_req: _description_
+
+    Returns:
+        The figure
+    """
+    fig = make_subplots(
+        rows=len(out_req),
+        cols=1,
+        shared_xaxes=True,
+        vertical_spacing=0.05,
+        horizontal_spacing=0.05,
+    ).update_layout(height=300*len(out_req), width=800, showlegend=False)
+    out_style = {"color": "black", "width": 0.5}
+    targ_style = {"color": "red"}
+    for o, out in enumerate(out_req):
+        for col in spaghetti[out].columns:
+            line = go.Scatter(x=spaghetti.index, y=spaghetti[out][col], line=out_style)
+            fig.add_trace(line, row=o+1, col=1)
+
+            targets = get_targets()
+            target = get_target_from_name(targets, out)
+            target_scatter = go.Scatter(x=target.index, y=target, mode="markers", line=targ_style)
+            fig.add_trace(target_scatter, row=o+1, col=1)
+        
+        fig.update_yaxes(title_text=f"{out}", row=o+1, col=1)
+
+    return fig
 
 
 def tabulate_calib_results(
@@ -44,7 +82,7 @@ def tabulate_calib_results(
         "Standard deviation",
         "ESS bulk",
         "ESS tail",
-        "$\\hat{R}$",
+        "r̂",
         "High-density interval",
     ]
     return table
@@ -126,19 +164,19 @@ def get_all_priors() -> List:
         All the priors used under any analyses
     """
     priors = [
-        esp.UniformPrior("contact_rate", (9.0, 13.0)),
-        esp.UniformPrior("self_recovery_rate", (0.1, 1.0)),
-        esp.UniformPrior("screening_scaleup_shape", (0.001, 0.5)),
-        esp.UniformPrior("screening_inflection_time", (2001.0, 2015.0)),
-        esp.UniformPrior("time_to_screening_end_asymp", (0.01, 5.0)),
-        #esp.UniformPrior("rr_infection_latent", (0.1, 1.0)),
-        #esp.UniformPrior("rr_infection_recovered", (0.1, 1.0)),
+        esp.UniformPrior("contact_rate", (4.0, 35.0)),
+        esp.TruncNormalPrior("self_recovery_rate", 0.300, 0.028, (0.200, 0.400)),
+        esp.UniformPrior("screening_scaleup_shape", (0.08, 0.2)),
+        esp.TruncNormalPrior("screening_inflection_time", 2011, 3.5, (2002, 2020)),
+        esp.GammaPrior.from_mode("time_to_screening_end_asymp", 1.0, 3.0),
+        esp.BetaPrior.from_mean_and_ci("rr_infection_latent", 0.35, (0.2, 0.5)),
+        #esp.BetaPrior.from_mean_and_ci("rr_infection_recovered", 0.35, (0.2, 0.5)),
         #esp.UniformPrior("seed_time", (1840.0, 1900.0)),
         #esp.UniformPrior("seed_duration", (1.0, 20.0)),
         #esp.UniformPrior("seed_rate", (1.0, 100.0)),
-        esp.UniformPrior("base_sensitivity", (0.1, 0.6)),
-        esp.UniformPrior("genexpert_sensitivity", (0.2, 1.0)),
-        esp.UniformPrior("progression_multiplier", (1.3, 1.7))
+        esp.BetaPrior.from_mean_and_ci("base_sensitivity", 0.4, (0.2, 0.6)),
+        esp.BetaPrior.from_mean_and_ci("genexpert_sensitivity", 0.9, (0.81, 0.99)),
+        esp.GammaPrior.from_mode("progression_multiplier", 1.0, 2.0)
     ]
 
     return priors

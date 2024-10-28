@@ -1,6 +1,22 @@
 from jax import numpy as jnp
 from math import log, exp
 import numpy as np
+import pandas as pd
+
+def get_target_from_name(
+    targets: list,
+    name: str,
+) -> pd.Series:
+    """Get the data for a specific target from a set of targets from its name.
+
+    Args:
+        targets: All the targets
+        name: The name of the desired target
+
+    Returns:
+        Single target to identify
+    """
+    return next((t.data for t in targets if t.name == name), None)
 
 def round_sigfig(value: float, sig_figs: int) -> float:
     """

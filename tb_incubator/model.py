@@ -1,8 +1,8 @@
 from typing import List, Dict
 from summer2 import Overwrite, AgeStratification, Multiply, CompartmentalModel
 from summer2.parameters import Parameter, Time, Function
-from summer2.functions.time import get_sigmoidal_interpolation_function
-from tb_incubator.input import get_death_rates, get_population_entry_rate, load_genexpert_util
+from summer2.functions.time import get_sigmoidal_interpolation_function, get_linear_interpolation_function
+from tb_incubator.input import get_death_rates, get_population_entry_rate, load_genexpert_util, load_targets
 import tb_incubator.constants as const
 from tb_incubator.utils import get_average_sigmoid, tanh_based_scaleup, triangle_wave_func
 from tb_incubator.outputs import request_model_outputs
