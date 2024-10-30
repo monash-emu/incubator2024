@@ -165,18 +165,18 @@ def get_all_priors() -> List:
     """
     priors = [
         esp.UniformPrior("contact_rate", (4.0, 35.0)),
-        esp.TruncNormalPrior("self_recovery_rate", 0.300, 0.028, (0.200, 0.400)),
-        esp.UniformPrior("screening_scaleup_shape", (0.08, 0.2)),
-        esp.TruncNormalPrior("screening_inflection_time", 2011, 3.5, (2002, 2020)),
-        esp.GammaPrior.from_mode("time_to_screening_end_asymp", 1.0, 3.0),
+        esp.TruncNormalPrior("self_recovery_rate", 0.350, 0.028, (0.200, 0.500)),
+        #esp.UniformPrior("screening_scaleup_shape", (0.05, 0.30)),
+        #esp.TruncNormalPrior("screening_inflection_time", 2011, 3.5, (2002, 2020)),
+        #esp.GammaPrior.from_mode("time_to_screening_end_asymp", 1.0, 3.0),
         esp.BetaPrior.from_mean_and_ci("rr_infection_latent", 0.35, (0.2, 0.5)),
         #esp.BetaPrior.from_mean_and_ci("rr_infection_recovered", 0.35, (0.2, 0.5)),
         #esp.UniformPrior("seed_time", (1840.0, 1900.0)),
         #esp.UniformPrior("seed_duration", (1.0, 20.0)),
         #esp.UniformPrior("seed_rate", (1.0, 100.0)),
-        esp.BetaPrior.from_mean_and_ci("base_sensitivity", 0.4, (0.2, 0.6)),
-        esp.BetaPrior.from_mean_and_ci("genexpert_sensitivity", 0.9, (0.81, 0.99)),
-        esp.GammaPrior.from_mode("progression_multiplier", 1.0, 2.0)
+        #esp.BetaPrior.from_mean_and_ci("base_sensitivity", 0.3, (0.1, 0.5)),
+        #esp.BetaPrior.from_mean_and_ci("genexpert_sensitivity", 0.9, (0.81, 0.99)),
+        esp.GammaPrior.from_mode("progression_multiplier", 0.5, 2.0)
     ]
 
     return priors
@@ -192,8 +192,14 @@ def get_targets() -> list:
     target_data = load_targets()
 
     targets = [
-        est.TruncatedNormalTarget("prevalence", target_data["prevalence"], (0.0, np.inf), esp.UniformPrior("prevalence_dispersion", (0.1, target_data["prevalence"].max() * 0.1))),
-        est.TruncatedNormalTarget("notification", target_data["notif2000"], (0.0, np.inf), esp.UniformPrior("notification_dispersion", (0.1, target_data["notif2000"].max() * 0.1)))
+        est.NormalTarget(
+            "prevalence", 
+            target_data["prevalence"],
+            esp.UniformPrior("prevalence_dispersion", (0.1, float(target_data["prevalence"].max() * 0.1)))),
+        est.NormalTarget(
+            "notification", 
+            np.log(target_data["notif2000"] + 1e-10), #log - on this line
+            esp.UniformPrior("notification_dispersion", (0.1, float(target_data["notif2000"].max() * 0.1))))
     ]
 
     return targets

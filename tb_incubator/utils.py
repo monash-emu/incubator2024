@@ -3,6 +3,31 @@ from math import log, exp
 import numpy as np
 import pandas as pd
 
+def get_next_run_number(out_path, num_priors):
+    """
+    Find the next available run number for a specific number of priors.
+    Returns a formatted string like '01', '02', etc.
+    """
+    # Look for files matching the pattern with the specific number of priors
+    pattern = f'calib_full_out_p{num_priors:02d}_*.nc'
+    existing_files = list(out_path.glob(pattern))
+    
+    if not existing_files:
+        return '01'
+    
+    # Extract run numbers from existing files
+    numbers = []
+    for f in existing_files:
+        # Split filename and get the last part after 'p{num_priors}_'
+        try:
+            run_num = int(f.stem.split('_')[-1])
+            numbers.append(run_num)
+        except ValueError:
+            continue
+    
+    next_num = max(numbers) + 1 if numbers else 1
+    return f'{next_num:02d}'
+
 def get_target_from_name(
     targets: list,
     name: str,
