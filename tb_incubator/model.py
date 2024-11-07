@@ -1,6 +1,6 @@
 from typing import List, Dict
 from summer2 import Overwrite, AgeStratification, Multiply, CompartmentalModel
-from summer2.parameters import Parameter, Time, Function
+from summer2.parameters import Parameter, Time, Function, DerivedOutput
 from summer2.functions.time import get_sigmoidal_interpolation_function, get_linear_interpolation_function
 from tb_incubator.input import get_death_rates, get_population_entry_rate, load_genexpert_util, load_targets
 import tb_incubator.constants as const
@@ -155,6 +155,7 @@ def build_model(params: Dict[str, any]) -> CompartmentalModel:
     )
 
     # Request model output
+    model.request_track_modelled_value("genexpert_util", genexpert_util)
     request_model_outputs(model)
 
     final_desc = "".join(desc)

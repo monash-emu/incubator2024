@@ -40,15 +40,17 @@ def plot_spaghetti_calib_comparison(
     targ_style = {"color": "red"}
     for o, out in enumerate(out_req):
         for col in spaghetti[out].columns:
-            line = go.Scatter(x=spaghetti.index, y=spaghetti[out][col], line=out_style)
+            line = go.Scatter(x=spaghetti.index, y=np.exp(spaghetti[out][col]), line=out_style)
             fig.add_trace(line, row=o+1, col=1)
+            fig.update_yaxes(title_text="Notification")
 
             targets = get_targets()
             target = get_target_from_name(targets, out)
-            target_scatter = go.Scatter(x=target.index, y=target, mode="markers", line=targ_style)
+            target_scatter = go.Scatter(x=target.index, y=np.exp(target), mode="markers", line=targ_style)
             fig.add_trace(target_scatter, row=o+1, col=1)
         
-        fig.update_yaxes(title_text=f"{out}", row=o+1, col=1)
+        clean_title = out.replace('_log', '').title()
+        fig.update_yaxes(title_text=clean_title, row=o+1, col=1)
 
     return fig
 
@@ -164,7 +166,7 @@ def get_all_priors() -> List:
         All the priors used under any analyses
     """
     priors = [
-        esp.UniformPrior("contact_rate", (4.0, 35.0)),
+        esp.UniformPrior("contact_rate", (1.0, 80.0)),
         esp.TruncNormalPrior("self_recovery_rate", 0.350, 0.028, (0.200, 0.500)),
         #esp.UniformPrior("screening_scaleup_shape", (0.05, 0.30)),
         #esp.TruncNormalPrior("screening_inflection_time", 2011, 3.5, (2002, 2020)),
@@ -193,13 +195,13 @@ def get_targets() -> list:
 
     targets = [
         est.NormalTarget(
-            "prevalence", 
-            target_data["prevalence"],
-            esp.UniformPrior("prevalence_dispersion", (0.1, float(target_data["prevalence"].max() * 0.1)))),
+            "prevalence_log", 
+            np.log(target_data["prevalence"]),
+            esp.TruncNormalPrior("prevalence_dispersion", 0.0, 0.322, (0.0, np.inf))),
         est.NormalTarget(
-            "notification", 
-            np.log(target_data["notif2000"] + 1e-10), #log - on this line
-            esp.UniformPrior("notification_dispersion", (0.1, float(target_data["notif2000"].max() * 0.1))))
+            "notification_log", 
+            np.log(target_data["notif2000"]),
+            esp.TruncNormalPrior("notification_dispersion", 0.0, 0.07, (0.0, np.inf)))
     ]
 
     return targets
