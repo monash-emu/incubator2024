@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from typing import List
+from typing import List, Dict, Any
 from matplotlib import pyplot as plt
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
@@ -42,7 +42,6 @@ def plot_spaghetti_calib_comparison(
         for col in spaghetti[out].columns:
             line = go.Scatter(x=spaghetti.index, y=np.exp(spaghetti[out][col]), line=out_style)
             fig.add_trace(line, row=o+1, col=1)
-            fig.update_yaxes(title_text="Notification")
 
             targets = get_targets()
             target = get_target_from_name(targets, out)
@@ -140,7 +139,12 @@ def plot_posterior_comparison(
     return comparison_plot[0, 0].figure
 
 
-def get_bcm(params) -> BayesianCompartmentalModel:
+def get_bcm(
+    params: Dict[str, any],
+    improved_detection: bool = True,
+    xpert_sensitivity: bool = True,
+    covid_effects: bool = True
+) -> BayesianCompartmentalModel:
     """
     Constructs and returns a Bayesian Compartmental Model.
     Parameters:
@@ -152,7 +156,7 @@ def get_bcm(params) -> BayesianCompartmentalModel:
       and fixed parameters, prior distributions for Bayesian inference, and target data for model
       validation or calibration.
     """
-    model, desc = build_model(params)
+    model, desc = build_model(params, improved_detection=improved_detection, xpert_sensitivity=xpert_sensitivity, covid_effects=covid_effects)
     priors = get_all_priors()
     targets = get_targets()
     
@@ -166,19 +170,22 @@ def get_all_priors() -> List:
         All the priors used under any analyses
     """
     priors = [
-        esp.UniformPrior("contact_rate", (1.0, 80.0)),
+        esp.UniformPrior("contact_rate", (1.0, 85.0)),
         esp.TruncNormalPrior("self_recovery_rate", 0.350, 0.028, (0.200, 0.500)),
-        #esp.UniformPrior("screening_scaleup_shape", (0.05, 0.30)),
-        #esp.TruncNormalPrior("screening_inflection_time", 2011, 3.5, (2002, 2020)),
-        #esp.GammaPrior.from_mode("time_to_screening_end_asymp", 1.0, 3.0),
-        esp.BetaPrior.from_mean_and_ci("rr_infection_latent", 0.35, (0.2, 0.5)),
+        esp.UniformPrior("screening_scaleup_shape", (0.05, 0.40)),
+        esp.TruncNormalPrior("screening_inflection_time", 2014, 3.5, (2004, 2023)),
+        esp.GammaPrior.from_mode("time_to_screening_end_asymp", 1.0, 3.0),
+        #esp.BetaPrior.from_mean_and_ci("rr_infection_latent", 0.35, (0.2, 0.5)),
         #esp.BetaPrior.from_mean_and_ci("rr_infection_recovered", 0.35, (0.2, 0.5)),
         #esp.UniformPrior("seed_time", (1840.0, 1900.0)),
         #esp.UniformPrior("seed_duration", (1.0, 20.0)),
-        #esp.UniformPrior("seed_rate", (1.0, 100.0)),
+        #esp.UniformPrior("seed_rate", (1.0, 100.0)), ddd
         #esp.BetaPrior.from_mean_and_ci("base_sensitivity", 0.3, (0.1, 0.5)),
         #esp.BetaPrior.from_mean_and_ci("genexpert_sensitivity", 0.9, (0.81, 0.99)),
-        esp.GammaPrior.from_mode("progression_multiplier", 0.5, 2.0)
+        esp.GammaPrior.from_mode("progression_multiplier", 0.3, 2.0),
+        #esp.UniformPrior("detection_reduction", (0.01, 0.9)),
+        #esp.UniformPrior("post_covid_improvement", (1.0, 10.0)),
+        esp.UniformPrior("follow_up_improvement", (1.0, 10.0)),
     ]
 
     return priors
@@ -201,7 +208,7 @@ def get_targets() -> list:
         est.NormalTarget(
             "notification_log", 
             np.log(target_data["notif2000"]),
-            esp.TruncNormalPrior("notification_dispersion", 0.0, 0.07, (0.0, np.inf)))
+            esp.TruncNormalPrior("notification_dispersion", 0.0, 0.1, (0.0, np.inf)))
     ]
 
     return targets

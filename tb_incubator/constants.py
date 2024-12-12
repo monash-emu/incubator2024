@@ -4,11 +4,10 @@ compartments = ["susceptible",
                 "early_latent", 
                 "late_latent", 
                 "infectious", 
-                "recovered",
-                "missed"]
+                "recovered"]
 
 latent_compartments = ["early_latent", "late_latent"]
-infectious_compartments = ["infectious", "missed"]
+infectious_compartments = ["infectious"]
 
 model_times = [1820, 2024]
 
@@ -21,7 +20,6 @@ indicator_names = {
     "comp_size_late_latent": "Late latent",
     "comp_size_infectious": "Infectious",
     "comp_size_recovered": "Recovered",
-    "comp_size_missed": "Missed",
     "total_population": "Total population",
     "notification": "TB notifications",
     "incidence": "TB incidence (per 100,000)",

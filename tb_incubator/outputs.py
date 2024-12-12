@@ -46,3 +46,6 @@ def request_model_outputs(
     model.request_function_output(
         "notification_per_incidence", notifs / DerivedOutput("incidence_raw") * 100.0
     )
+
+
+

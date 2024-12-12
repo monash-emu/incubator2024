@@ -19,12 +19,15 @@ descriptions:
   time_to_screening_end_asymp: "Time from active TB to be screened"
   base_sensitivity: "Preceding diagnostic algorithm sensitivity"
   genexpert_sensitivity: "GeneXpert sensitivity"
+  detection_reduction: "Detection reduction"
+  post_covid_improvement: "Detection improvement after COVID-19 pandemic"
+  follow_up_improvement: "Follow-up detection improvement after COVID-19 pandemic"
 value:
   start_population_size: 1.0
   age_infectiousness_switch: 15.0
   death_rate: 0.1
-  contact_rate: 9.54
-  self_recovery_rate: 0.29
+  contact_rate: 51.56
+  self_recovery_rate: 0.34
   rr_infection_latent: 0.12
   rr_infection_recovered: 0.87
   age_latency:
@@ -46,15 +49,18 @@ value:
       15: 2.0
       35: 2.0
       50: 2.0
-  progression_multiplier : 1.44
+  progression_multiplier : 0.60
   seed_time: 1881.5
   seed_duration: 19.55
   seed_rate: 70.65
-  screening_scaleup_shape: 0.199
-  screening_inflection_time: 2009.3
-  time_to_screening_end_asymp: 0.336
+  screening_scaleup_shape: 0.055
+  screening_inflection_time: 2011.35
+  time_to_screening_end_asymp: 1.05
   base_sensitivity: 0.287
   genexpert_sensitivity: 0.826
+  detection_reduction: 0.62
+  post_covid_improvement: 1.69
+  follow_up_improvement: 4.25
 unit:
   start_population_size: "person"
   age_infectiousness_switch: "years old"
@@ -76,6 +82,9 @@ unit:
   time_to_screening_end_asymp: " "
   base_sensitivity: ""
   genexpert_sensitivity: ""
+  detection_reduction: ""
+  post_covid_improvement: ""
+  follow_up_improvement: ""
 sources:
   start_population_size: "A value to avoid dividing by zero in the force of infection calculation"
   age_infectiousness_switch: "Set based on duration of BCG protection [@nguipdop2016, @roy2019]"
@@ -94,3 +103,6 @@ sources:
   time_to_screening_end_asymp: "Fitted [@ragonnet2022]"
   base_sensitivity: "Fitted"
   genexpert_sensitivity: "Fitted"
+  detection_reduction: "Fitted"
+  post_covid_improvement: "Fitted"
+  follow_up_improvement: "Fitted"
