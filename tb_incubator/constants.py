@@ -9,6 +9,7 @@ compartments = ["susceptible",
 latent_compartments = ["early_latent", "late_latent"]
 infectious_compartments = ["infectious"]
 
+
 model_times = [1820, 2024]
 
 agegroup_request = [[0, 4], [5, 14], [15, 34], [35, 49], [50, 100]]
@@ -59,3 +60,4 @@ data_path = project_paths["DATA_PATH"]
 image_path = project_paths["IMAGE_PATH"]
 out_path = project_paths["OUT_PATH"]
 
+BURN_IN = 12500
