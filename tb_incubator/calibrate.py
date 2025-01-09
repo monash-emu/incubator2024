@@ -171,21 +171,22 @@ def get_all_priors() -> List:
     """
     priors = [
         esp.UniformPrior("contact_rate", (1.0, 85.0)),
-        esp.TruncNormalPrior("self_recovery_rate", 0.350, 0.028, (0.200, 0.500)),
-        esp.UniformPrior("screening_scaleup_shape", (0.05, 0.40)),
-        esp.TruncNormalPrior("screening_inflection_time", 2014, 3.5, (2004, 2023)),
-        esp.GammaPrior.from_mode("time_to_screening_end_asymp", 1.0, 3.0),
+        #esp.TruncNormalPrior("self_recovery_rate", 0.350, 0.028, (0.200, 0.500)),
+        #esp.UniformPrior("screening_scaleup_shape", (0.05, 0.40)),
+        #esp.TruncNormalPrior("screening_inflection_time", 2011, 3.5, (2004, 2023)),
+        #esp.GammaPrior.from_mode("time_to_screening_end_asymp", 1.0, 3.0),
         #esp.BetaPrior.from_mean_and_ci("rr_infection_latent", 0.35, (0.2, 0.5)),
         #esp.BetaPrior.from_mean_and_ci("rr_infection_recovered", 0.35, (0.2, 0.5)),
-        #esp.UniformPrior("seed_time", (1840.0, 1900.0)),
+        #esp.UniformPrior("seed_time", (1840.0, 1900.0)),  
         #esp.UniformPrior("seed_duration", (1.0, 20.0)),
-        #esp.UniformPrior("seed_rate", (1.0, 100.0)), ddd
+        #esp.UniformPrior("seed_rate", (1.0, 100.0)), 
         #esp.BetaPrior.from_mean_and_ci("base_sensitivity", 0.3, (0.1, 0.5)),
         #esp.BetaPrior.from_mean_and_ci("genexpert_sensitivity", 0.9, (0.81, 0.99)),
-        esp.GammaPrior.from_mode("progression_multiplier", 0.3, 2.0),
-        #esp.UniformPrior("detection_reduction", (0.01, 0.9)),
-        #esp.UniformPrior("post_covid_improvement", (1.0, 10.0)),
-        esp.UniformPrior("follow_up_improvement", (1.0, 10.0)),
+        esp.GammaPrior.from_mode("progression_multiplier", 0.5, 2.0),
+        esp.UniformPrior("detection_multiplier", (1.0, 2.0)),
+        esp.UniformPrior("detection_reduction", (0.05, 0.9)),
+        esp.UniformPrior("post_covid_improvement", (1.0, 2.0)),
+        esp.UniformPrior("sustained_improvement", (3.0, 6.0)),
     ]
 
     return priors
