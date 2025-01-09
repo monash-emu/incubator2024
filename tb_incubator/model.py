@@ -126,19 +126,22 @@ def build_model(
     
     ## improved detection
     if improved_detection:
-        detection_multiplier = 0.844/0.590  # 59% detected in 2017 and 84.4% detected in 2023 ≈ 1.43 times improvement
-        detection_improvement = get_linear_interpolation_function([2017, 2023], [1.0, detection_multiplier])
+        detection_improvement = get_linear_interpolation_function([2017, 2024], [1.0, Parameter("detection_multiplier")])
         detection_func = detection_func * detection_improvement
 
     ## xpert sensitivity
+    sensitivity = Parameter("base_sensitivity")
     if xpert_sensitivity:
         utilisation = load_genexpert_util()
         genexpert_util = get_sigmoidal_interpolation_function(utilisation.index, utilisation)
         genexpert_improvement = (1.0 - Parameter("base_sensitivity")) * Parameter("genexpert_sensitivity") * genexpert_util
-        sensitivity = Parameter("base_sensitivity") + genexpert_improvement
-        detection_func = detection_func * sensitivity
+        sensitivity += genexpert_improvement
+
         model.request_track_modelled_value("genexpert_util", genexpert_util)
-        model.request_track_modelled_value("sensitivity", sensitivity)
+    
+    detection_func = detection_func * sensitivity
+    model.request_track_modelled_value("sensitivity", sensitivity)
+
     
     ## covid effects
     if covid_effects:
@@ -147,10 +150,11 @@ def build_model(
         )
         detection_func = detection_func * covid_impacts
         model.request_track_modelled_value("covid_effects", covid_impacts)
+
+        ### post-COVID sustained improvement
+        sustained_improvement = get_linear_interpolation_function([2022.0, model_times[-1]], [1.0, Parameter("sustained_improvement")])
+        detection_func = detection_func * sustained_improvement
     
-    ### post-covid improved detection
-        followup_improvement = get_linear_interpolation_function([2022.0, model_times[1]], [1.0, Parameter("follow_up_improvement")])
-        detection_func = detection_func * followup_improvement
     
     model.add_transition_flow("detection", detection_func, "infectious", "recovered")
 
@@ -273,10 +277,10 @@ def seed_infectious(model: CompartmentalModel):
         Parameter("seed_duration"),
         Parameter("seed_rate"),
     ]
-    voc_seed_func = Function(triangle_wave_func, seed_args)
+    seed_func = Function(triangle_wave_func, seed_args)
     model.add_importation_flow(
         "seed_infectious",
-        voc_seed_func,
+        seed_func,
         "infectious",
         split_imports=True,
     )
