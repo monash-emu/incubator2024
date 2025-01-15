@@ -10,7 +10,7 @@ latent_compartments = ["early_latent", "late_latent"]
 infectious_compartments = ["infectious"]
 
 
-model_times = [1820, 2024]
+model_times = [1820, 2035]
 
 agegroup_request = [[0, 4], [5, 14], [15, 34], [35, 49], [50, 100]]
 age_strata = [i[0] for i in agegroup_request]
