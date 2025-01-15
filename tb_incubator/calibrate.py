@@ -170,7 +170,7 @@ def get_all_priors() -> List:
         All the priors used under any analyses
     """
     priors = [
-        esp.UniformPrior("contact_rate", (1.0, 85.0)),
+        esp.UniformPrior("contact_rate", (1.0, 70.0)),
         #esp.TruncNormalPrior("self_recovery_rate", 0.350, 0.028, (0.200, 0.500)),
         #esp.UniformPrior("screening_scaleup_shape", (0.05, 0.40)),
         #esp.TruncNormalPrior("screening_inflection_time", 2011, 3.5, (2004, 2023)),
@@ -182,11 +182,11 @@ def get_all_priors() -> List:
         #esp.UniformPrior("seed_rate", (1.0, 100.0)), 
         #esp.BetaPrior.from_mean_and_ci("base_sensitivity", 0.3, (0.1, 0.5)),
         #esp.BetaPrior.from_mean_and_ci("genexpert_sensitivity", 0.9, (0.81, 0.99)),
-        esp.GammaPrior.from_mode("progression_multiplier", 0.5, 2.0),
+        esp.GammaPrior.from_mode("progression_multiplier", 0.5, 5.0),
         esp.UniformPrior("detection_multiplier", (1.0, 2.0)),
         esp.UniformPrior("detection_reduction", (0.05, 0.9)),
         esp.UniformPrior("post_covid_improvement", (1.0, 2.0)),
-        esp.UniformPrior("sustained_improvement", (3.0, 6.0)),
+        esp.UniformPrior("sustained_improvement", (4.0, 5.0)),
     ]
 
     return priors
