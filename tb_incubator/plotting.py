@@ -111,12 +111,14 @@ def set_plot_label(plot, indicator_names, y_axis):
     )
 
 
-def display_plot(plot, plot_name, image_format):
-    # Save the figure as an SVG file
-    plot.write_image(image_path / f"{plot_name}.{image_format}", format=f"{image_format}")
-
-    # Display an image
-    # The `rsvg-convert` utility must be installed for this function to work properly.
-    # To install it on macOS, use the following command:
-    # `brew install librsvg`
-    display(SVG(image_path / f"{plot_name}.{image_format}")) 
+def display_plot(plot, plot_name, image_format='svg'):
+    # Save the figure in specified format
+    plot.write_image(image_path / f"{plot_name}.{image_format}", format=image_format)
+    
+    # Choose appropriate display method based on format
+    if image_format.lower() == 'svg':
+        from IPython.display import SVG
+        display(SVG(image_path / f"{plot_name}.{image_format}"))
+    else:
+        from IPython.display import Image
+        display(Image(image_path / f"{plot_name}.{image_format}"))
