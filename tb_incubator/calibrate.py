@@ -141,7 +141,6 @@ def plot_posterior_comparison(
 
 def get_bcm(
     params: Dict[str, any],
-    improved_detection: bool = True,
     xpert_sensitivity: bool = True,
     covid_effects: bool = True
 ) -> BayesianCompartmentalModel:
@@ -156,7 +155,7 @@ def get_bcm(
       and fixed parameters, prior distributions for Bayesian inference, and target data for model
       validation or calibration.
     """
-    model, desc = build_model(params, improved_detection=improved_detection, xpert_sensitivity=xpert_sensitivity, covid_effects=covid_effects)
+    model, desc = build_model(params, xpert_sensitivity=xpert_sensitivity, covid_effects=covid_effects)
     priors = get_all_priors()
     targets = get_targets()
     
@@ -170,7 +169,7 @@ def get_all_priors() -> List:
         All the priors used under any analyses
     """
     priors = [
-        esp.UniformPrior("contact_rate", (1.0, 70.0)),
+        esp.UniformPrior("contact_rate", (1.0, 95.0)),
         #esp.TruncNormalPrior("self_recovery_rate", 0.350, 0.028, (0.200, 0.500)),
         #esp.UniformPrior("screening_scaleup_shape", (0.05, 0.40)),
         #esp.TruncNormalPrior("screening_inflection_time", 2011, 3.5, (2004, 2023)),
@@ -183,10 +182,10 @@ def get_all_priors() -> List:
         #esp.BetaPrior.from_mean_and_ci("base_sensitivity", 0.3, (0.1, 0.5)),
         #esp.BetaPrior.from_mean_and_ci("genexpert_sensitivity", 0.9, (0.81, 0.99)),
         esp.GammaPrior.from_mode("progression_multiplier", 0.5, 5.0),
-        esp.UniformPrior("detection_multiplier", (1.0, 2.0)),
+        #esp.UniformPrior("detection_multiplier", (1.0, 2.0)),
         esp.UniformPrior("detection_reduction", (0.05, 0.9)),
-        esp.UniformPrior("post_covid_improvement", (1.0, 2.0)),
-        esp.UniformPrior("sustained_improvement", (4.0, 5.0)),
+        esp.UniformPrior("post_covid_improvement", (1.0, 4.0)),
+        esp.UniformPrior("sustained_improvement", (4.0, 6.0)),
     ]
 
     return priors
