@@ -19,15 +19,17 @@ descriptions:
   time_to_screening_end_asymp: "Time from active TB to be screened"
   base_sensitivity: "Preceding diagnostic algorithm sensitivity"
   genexpert_sensitivity: "GeneXpert sensitivity"
-  detection_multiplier: "Improved detection multiplier"
   detection_reduction: "Detection reduction"
   post_covid_improvement: "Post-COVID19 detection improvement"
   sustained_improvement: "Additional detection improvement factor"
+  smear_positive_infect_multiplier: "Relative infectiousness of smear-positive TB"
+  smear_negative_infect_multiplier: "Relative infectiousness of smear-negative TB"
+  extrapulmonary_infect_multiplier: "Relative infectiousness of extrapulmonary TB"
 value:
   start_population_size: 1.0
   age_infectiousness_switch: 15.0
   death_rate: 0.1
-  contact_rate: 51.56
+  contact_rate: 36.203285817215914
   self_recovery_rate: 0.34
   rr_infection_latent: 0.12
   rr_infection_recovered: 0.87
@@ -50,7 +52,7 @@ value:
       15: 2.0
       35: 2.0
       50: 2.0
-  progression_multiplier : 0.60
+  progression_multiplier : 0.7975952842355304
   seed_time: 1881.5
   seed_duration: 19.55
   seed_rate: 70.65
@@ -59,10 +61,12 @@ value:
   time_to_screening_end_asymp: 1.05
   base_sensitivity: 0.287
   genexpert_sensitivity: 0.826
-  detection_multiplier: 1.43
-  detection_reduction: 0.62
-  post_covid_improvement: 1.69
-  sustained_improvement: 4.5
+  detection_reduction: 0.5707673479232517
+  post_covid_improvement: 1.9226694724100577
+  sustained_improvement: 5.1324558252247225
+  smear_positive_infect_multiplier: 1.0
+  smear_negative_infect_multiplier: 0.25
+  extrapulmonary_infect_multiplier: 0.
 unit:
   start_population_size: "person"
   age_infectiousness_switch: "years old"
@@ -84,10 +88,12 @@ unit:
   time_to_screening_end_asymp: " "
   base_sensitivity: ""
   genexpert_sensitivity: ""
-  detection_multiplier: ""
   detection_reduction: ""
   post_covid_improvement: ""
   sustained_improvement: ""
+  smear_positive_infect_multiplier: ""
+  smear_negative_infect_multiplier: ""
+  extrapulmonary_infect_multiplier: ""
 sources:
   start_population_size: "A value to avoid dividing by zero in the force of infection calculation"
   age_infectiousness_switch: "Set based on duration of BCG protection [@nguipdop2016, @roy2019]"
@@ -106,7 +112,9 @@ sources:
   time_to_screening_end_asymp: "Fitted [@ragonnet2022]"
   base_sensitivity: "Fitted"
   genexpert_sensitivity: "Fitted"
-  detection_multiplier: ""
   detection_reduction: "Fitted"
   post_covid_improvement: "Fitted"
-  sustained_improvement: "Fittedl"
+  sustained_improvement: "Fitted"
+  smear_positive_infect_multiplier: ""
+  smear_negative_infect_multiplier: ""
+  extrapulmonary_infect_multiplier: ""

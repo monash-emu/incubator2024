@@ -1,12 +1,12 @@
-from typing import List, Dict
-from summer2 import Overwrite, AgeStratification, Multiply, CompartmentalModel
+from typing import Dict
+from summer2 import CompartmentalModel
 from summer2.parameters import Parameter, Time, Function
 from summer2.functions.time import get_sigmoidal_interpolation_function, get_linear_interpolation_function
-from tb_incubator.input import get_death_rates, get_population_entry_rate, load_genexpert_util, load_targets
+from .input import get_population_entry_rate, load_genexpert_util
 import tb_incubator.constants as const
-from tb_incubator.utils import get_average_sigmoid, tanh_based_scaleup, triangle_wave_func
-from tb_incubator.outputs import request_model_outputs
-import numpy as np
+from .utils import tanh_based_scaleup, triangle_wave_func
+from .outputs import request_model_outputs
+from .strat_age import get_age_strat
 
 compartments = const.compartments
 infectious_compartments = const.infectious_compartments
@@ -16,7 +16,6 @@ agegroup_request = const.agegroup_request
 
 def build_model(
     params: Dict[str, any],
-    improved_detection: bool = True,
     xpert_sensitivity: bool = True,
     covid_effects: bool = True
 ) -> CompartmentalModel:
@@ -28,8 +27,6 @@ def build_model(
         params: Dictionary of parameters with fixed values
         xpert_sensitivity: Whether to include GeneXpert sensitivity for detection multiplier
         covid_effect: Whether to include COVID-related reduction and post-COVID detection improvement
-        improved_detection: Whether to include the improved detection multiplier after COVID-19 pandemic
-
     Returns:
         A configured CompartmentalModel object.
     """
@@ -123,11 +120,6 @@ def build_model(
             1.0 / Parameter("time_to_screening_end_asymp")
         ]
     )
-    
-    ## improved detection
-    if improved_detection:
-        detection_improvement = get_linear_interpolation_function([2017, 2024], [1.0, Parameter("detection_multiplier")])
-        detection_func = detection_func * detection_improvement
 
     ## xpert sensitivity
     sensitivity = Parameter("base_sensitivity")
@@ -213,56 +205,6 @@ def add_infection_flow(model):
         model.add_infection_frequency_flow(name, rate, origin, "early_latent")
 
 
-def set_popdeath_adjs(age_strata: List[int], strat: AgeStratification):
-    deathrate_df, description = get_death_rates()
-    death_adjs = {}
-    for age in age_strata:
-        years = deathrate_df.index
-        rates = deathrate_df[age]
-        pop_death_func = get_sigmoidal_interpolation_function(years, rates)
-        death_adjs[str(age)] = Overwrite(pop_death_func)
-
-    strat.set_flow_adjustments("population_death", death_adjs)
-
-
-def set_latency_adjs(params: Dict[str, any], age_strata: List[int], strat: AgeStratification):
-    for flow_name, latency_params in params["age_latency"].items():
-        adjs = {}
-        for age in age_strata:
-            param_age_bracket = max([k for k in latency_params if k <= age])
-            age_val = latency_params[param_age_bracket]
-
-            adj = (
-                Parameter("progression_multiplier") * age_val
-                if "_activation" in flow_name
-                else age_val
-            )
-            adjs[str(age)] = adj
-
-        adjs = {k: Overwrite(v) for k, v in adjs.items()}
-        strat.set_flow_adjustments(flow_name, adjs)
-
-def add_infectiousness_adjs(
-    infectious_compartments: List[str],
-    params: Dict[str, any],
-    age_strata: List[int],
-    strat: AgeStratification,
-):
-    inf_switch_age = params["age_infectiousness_switch"]
-    for comp in infectious_compartments:
-        inf_adjs = {}
-        for i, age_low in enumerate(age_strata):
-            if age_low == age_strata[-1]:
-                average_infectiousness = 1.0
-            else:
-                age_high = age_strata[i + 1]
-                average_infectiousness = get_average_sigmoid(age_low, age_high, inf_switch_age)
-            # Update the adjustments dictionary for the current age group.
-            inf_adjs[str(age_low)] = Multiply(average_infectiousness)
-
-        strat.add_infectiousness_adjustments(comp, inf_adjs)
-
-
 def seed_infectious(model: CompartmentalModel):
     """
     Adds an importation flow to the model to simulate the initial seeding of infectious individuals.
@@ -284,29 +226,3 @@ def seed_infectious(model: CompartmentalModel):
         "infectious",
         split_imports=True,
     )
-
-# Age stratification
-def get_age_strat(params: Dict[str, any]) -> AgeStratification:
-    """
-    Creates and configures an age stratification for a compartmental model.
-
-    Args:
-        params: A dictionary of fixed parameters for the model, which includes
-                keys for age-specific latency adjustments, infectiousness switch ages,
-                and parameters for BCG effects and treatment outcomes.
-
-    Returns:
-        AgeStratification: An object representing the configured age stratification for the model.
-    """
-    strat = AgeStratification("age", age_strata, compartments)
-
-    # Set universal death rates
-    set_popdeath_adjs(age_strata, strat)
-
-    # Set age-specific latency rate
-    set_latency_adjs(params, age_strata, strat)
-
-    # Set age-adjusted infectiousness
-    add_infectiousness_adjs(infectious_compartments, params, age_strata, strat)
-
-    return strat

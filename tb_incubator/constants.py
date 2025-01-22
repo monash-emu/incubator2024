@@ -15,6 +15,12 @@ model_times = [1820, 2035]
 agegroup_request = [[0, 4], [5, 14], [15, 34], [35, 49], [50, 100]]
 age_strata = [i[0] for i in agegroup_request]
 
+organ_strata = [
+    "smear_positive",
+    "smear_negative",
+    "extrapulmonary",
+]
+
 indicator_names = {
     "comp_size_susceptible": "Susceptible",
     "comp_size_early_latent": "Early latent",
