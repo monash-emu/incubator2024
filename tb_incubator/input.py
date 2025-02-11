@@ -16,11 +16,6 @@ def load_report_section(file_path, section):
     # Display the section text as markdown in a Jupyter notebook
     display(Markdown(section_text))
 
-def load_genexpert_conf_cases():
-    targets = load_targets()
-
-    return targets["cases_conf_genexpert"]
-
 def load_genexpert_util():
     targets = load_targets()
 

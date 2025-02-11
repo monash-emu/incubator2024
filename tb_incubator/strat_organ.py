@@ -1,4 +1,5 @@
 from typing import List, Dict
+from summer2 import Stratification
 from summer2 import Overwrite, Multiply
 from summer2.parameters import Parameter, Time, Function
 from summer2.functions.time import get_sigmoidal_interpolation_function, get_linear_interpolation_function
@@ -18,8 +19,8 @@ def get_organ_strat(
     infectious_compartments: List[str],
     organ_strata: List[str],
     fixed_params: Dict[str, any],
-    detection_reduction,
-    improved_detection_multiplier = None,
+    xpert_sensitivity: bool = True,
+    covid_effects: bool = True,
 ) -> Stratification:
     """
     Creates and configures an organ stratification for the model. This includes defining
@@ -59,11 +60,8 @@ def get_organ_strat(
         genexpert_util = get_sigmoidal_interpolation_function(utilisation.index, utilisation)
         genexpert_improvement = (1.0 - Parameter("base_sensitivity")) * Parameter("genexpert_sensitivity") * genexpert_util
         sensitivity += genexpert_improvement
-
-        model.request_track_modelled_value("genexpert_util", genexpert_util)
     
     detection_func = detection_func * sensitivity
-    model.request_track_modelled_value("sensitivity", sensitivity)
 
     
     ## covid effects
@@ -72,8 +70,6 @@ def get_organ_strat(
             [2019.0, 2020.0, 2022.0], [1.0, 1.0 - Parameter("detection_reduction"), Parameter("post_covid_improvement")]
         )
         detection_func = detection_func * covid_impacts
-        model.request_track_modelled_value("covid_effects", covid_impacts)
-
         ### post-COVID sustained improvement
         sustained_improvement = get_linear_interpolation_function([2022.0, model_times[-1]], [1.0, Parameter("sustained_improvement")])
         detection_func = detection_func * sustained_improvement
@@ -87,25 +83,25 @@ def get_organ_strat(
         inf_adj[organ_stratum] = Multiply(inf_adj_param)
 
         # Define different natural history (self-recovery) by organ status
-        param_strat = "smear_negative" if organ_stratum == "extrapulmonary" else organ_stratum
-        self_recovery_adjustments[organ_stratum] = Overwrite(Parameter(f"{param_strat}_self_recovery"))
+        #param_strat = "smear_negative" if organ_stratum == "extrapulmonary" else organ_stratum
+        #self_recovery_adjustments[organ_stratum] = Overwrite(Parameter(f"{param_strat}_self_recovery"))
 
         # Adjust detection by organ status
         param_name = f"passive_screening_sensitivity_{organ_stratum}"
         detection_adjs[organ_stratum] = fixed_params[param_name] * detection_func
 
         # Calculate infection death adjustment using detection adjustments
-        infect_death_adjs[organ_stratum] = Parameter(f"{param_strat}_death_rate")
+        #infect_death_adjs[organ_stratum] = Parameter(f"{param_strat}_death_rate")
        
 
     # Apply the Multiply function to the detection adjustments
     detection_adjs = {k: Multiply(v) for k, v in detection_adjs.items()}
-    infect_death_adjs = {k: Overwrite(v) for k, v in infect_death_adjs.items()}
+    #infect_death_adjs = {k: Overwrite(v) for k, v in infect_death_adjs.items()}
 
     # Set flow and infectiousness adjustments
     strat.set_flow_adjustments("detection", detection_adjs)
-    strat.set_flow_adjustments("self_recovery", self_recovery_adjustments)
-    strat.set_flow_adjustments("infect_death", infect_death_adjs)
+    #strat.set_flow_adjustments("self_recovery", self_recovery_adjustments)
+    #strat.set_flow_adjustments("infect_death", infect_death_adjs)
     for comp in infectious_compartments:
         strat.add_infectiousness_adjustments(comp, inf_adj)
 
@@ -120,10 +116,12 @@ def get_organ_strat(
         flow_adjs = {k: Multiply(v) for k, v in splitting_proportions.items()}
         strat.set_flow_adjustments(flow_name, flow_adjs)
 
-    organ_adjs = {
-        "smear_positive": Multiply(1.0),
-        "smear_negative": Multiply(1.0),
-        "extrapulmonary": Multiply(0.0),
-    }
+    #organ_adjs = {
+    #    "smear_positive": Multiply(1.0),
+    #    "smear_negative": Multiply(1.0),
+    #    "extrapulmonary": Multiply(0.0),
+    #}
+
+    #strat.set_flow_adjustments("acf_detection", organ_adjs)
     
     return strat

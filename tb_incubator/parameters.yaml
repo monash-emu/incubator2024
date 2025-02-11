@@ -25,6 +25,11 @@ descriptions:
   smear_positive_infect_multiplier: "Relative infectiousness of smear-positive TB"
   smear_negative_infect_multiplier: "Relative infectiousness of smear-negative TB"
   extrapulmonary_infect_multiplier: "Relative infectiousness of extrapulmonary TB"
+  incidence_props_pulmonary: "Proportion of pulmonary TB cases among all TB cases"
+  incidence_props_smear_positive_among_pulmonary: "Proportion of smear-positive TB among all pulmonary TB cases"
+  passive_screening_sensitivity_extrapulmonary: "Screening sensitivity for extrapulmonary TB"
+  passive_screening_sensitivity_smear_negative: "Screening sensitivity for smear-negative TB"
+  passive_screening_sensitivity_smear_positive: "Screening sensitivity for smear-positive TB"
 value:
   start_population_size: 1.0
   age_infectiousness_switch: 15.0
@@ -52,21 +57,26 @@ value:
       15: 2.0
       35: 2.0
       50: 2.0
-  progression_multiplier : 0.7975952842355304
+  progression_multiplier : 0.7695143770102403
   seed_time: 1881.5
   seed_duration: 19.55
   seed_rate: 70.65
   screening_scaleup_shape: 0.055
   screening_inflection_time: 2011.35
   time_to_screening_end_asymp: 1.05
-  base_sensitivity: 0.287
+  base_sensitivity: 0.4
   genexpert_sensitivity: 0.826
-  detection_reduction: 0.5707673479232517
+  detection_reduction: 0.53
   post_covid_improvement: 1.9226694724100577
   sustained_improvement: 5.1324558252247225
   smear_positive_infect_multiplier: 1.0
   smear_negative_infect_multiplier: 0.25
   extrapulmonary_infect_multiplier: 0.
+  incidence_props_pulmonary: 0.90
+  incidence_props_smear_positive_among_pulmonary: 0.70
+  passive_screening_sensitivity_extrapulmonary: 0.5
+  passive_screening_sensitivity_smear_negative: 0.7
+  passive_screening_sensitivity_smear_positive: 1.0
 unit:
   start_population_size: "person"
   age_infectiousness_switch: "years old"
@@ -94,6 +104,11 @@ unit:
   smear_positive_infect_multiplier: ""
   smear_negative_infect_multiplier: ""
   extrapulmonary_infect_multiplier: ""
+  incidence_props_pulmonary: ""
+  incidence_props_smear_positive_among_pulmonary: ""
+  passive_screening_sensitivity_extrapulmonary: ""
+  passive_screening_sensitivity_smear_negative: ""
+  passive_screening_sensitivity_smear_positive: ""
 sources:
   start_population_size: "A value to avoid dividing by zero in the force of infection calculation"
   age_infectiousness_switch: "Set based on duration of BCG protection [@nguipdop2016, @roy2019]"
@@ -118,3 +133,9 @@ sources:
   smear_positive_infect_multiplier: ""
   smear_negative_infect_multiplier: ""
   extrapulmonary_infect_multiplier: ""
+  incidence_props_pulmonary: ""
+  incidence_props_smear_positive_among_pulmonary: ""
+  passive_screening_sensitivity_extrapulmonary: ""
+  passive_screening_sensitivity_smear_negative: ""
+  passive_screening_sensitivity_smear_positive: ""
+  

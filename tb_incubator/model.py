@@ -2,22 +2,27 @@ from typing import Dict
 from summer2 import CompartmentalModel
 from summer2.parameters import Parameter, Time, Function
 from summer2.functions.time import get_sigmoidal_interpolation_function, get_linear_interpolation_function
-from .input import get_population_entry_rate, load_genexpert_util
+from .input import get_population_entry_rate, load_param_info
 import tb_incubator.constants as const
 from .utils import tanh_based_scaleup, triangle_wave_func
 from .outputs import request_model_outputs
 from .strat_age import get_age_strat
+from .strat_organ import get_organ_strat
 
 compartments = const.compartments
 infectious_compartments = const.infectious_compartments
 age_strata = const.age_strata
+organ_strata = const.organ_strata
 model_times = const.model_times
 agegroup_request = const.agegroup_request
+
+param_info = load_param_info()
+fixed_params = param_info["value"]
 
 def build_model(
     params: Dict[str, any],
     xpert_sensitivity: bool = True,
-    covid_effects: bool = True
+    covid_effects: bool = True,
 ) -> CompartmentalModel:
     """
     Builds and returns a compartmental model for epidemiological studies, incorporating
@@ -96,6 +101,8 @@ def build_model(
         "Progression flows from latent compartments to infectious compartment are also implemented to model the progression from individuals "
         "with latent infection to active TB. "
     )
+    # Detection
+    model.add_transition_flow("detection", 1.0, "infectious", "recovered")
 
     # Age-stratification
     strat = get_age_strat(params)
@@ -109,46 +116,15 @@ def build_model(
         "births", entry_rate, dest="susceptible", split_imports=True, dest_strata={"age": "0"}
     )
 
-    # Detection
-    detection_func = Function(
-        tanh_based_scaleup,
-        [
-            Time,
-            Parameter("screening_scaleup_shape"),
-            Parameter("screening_inflection_time"),
-            0.0,
-            1.0 / Parameter("time_to_screening_end_asymp")
-        ]
+    # Organ-stratification
+    organ_strat = get_organ_strat(
+        infectious_compartments,
+        organ_strata,
+        fixed_params,
+        xpert_sensitivity=xpert_sensitivity,
+        covid_effects=covid_effects,
     )
-
-    ## xpert sensitivity
-    sensitivity = Parameter("base_sensitivity")
-    if xpert_sensitivity:
-        utilisation = load_genexpert_util()
-        genexpert_util = get_sigmoidal_interpolation_function(utilisation.index, utilisation)
-        genexpert_improvement = (1.0 - Parameter("base_sensitivity")) * Parameter("genexpert_sensitivity") * genexpert_util
-        sensitivity += genexpert_improvement
-
-        model.request_track_modelled_value("genexpert_util", genexpert_util)
-    
-    detection_func = detection_func * sensitivity
-    model.request_track_modelled_value("sensitivity", sensitivity)
-
-    
-    ## covid effects
-    if covid_effects:
-        covid_impacts = get_sigmoidal_interpolation_function(
-            [2019.0, 2020.0, 2022.0], [1.0, 1.0 - Parameter("detection_reduction"), Parameter("post_covid_improvement")]
-        )
-        detection_func = detection_func * covid_impacts
-        model.request_track_modelled_value("covid_effects", covid_impacts)
-
-        ### post-COVID sustained improvement
-        sustained_improvement = get_linear_interpolation_function([2022.0, model_times[-1]], [1.0, Parameter("sustained_improvement")])
-        detection_func = detection_func * sustained_improvement
-    
-    
-    model.add_transition_flow("detection", detection_func, "infectious", "recovered")
+    model.stratify_with(organ_strat)
 
     desc.append(
         "The detection rate refers to the progression of individuals with active TB (I) "
@@ -166,7 +142,6 @@ def build_model(
 
     # Request model outputs
     request_model_outputs(model)
-    model.request_track_modelled_value("detection", detection_func) # Additional output
     
     final_desc = "".join(desc)
 
