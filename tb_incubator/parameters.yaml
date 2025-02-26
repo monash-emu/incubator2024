@@ -1,9 +1,7 @@
 descriptions:
   start_population_size: "Start population size"
   age_infectiousness_switch: "Age infectiousness switch"
-  death_rate: "TB-specific death rate"
   contact_rate: "Contact rate"
-  self_recovery_rate: "Self-recovery rate"
   rr_infection_latent: "Relative risk of reinfection while latently infected (ref. infection-naive)"
   rr_infection_recovered: "Relative risk of reinfection after recovery (ref. infection-naive)"
   age_latency:
@@ -20,8 +18,8 @@ descriptions:
   base_sensitivity: "Preceding diagnostic algorithm sensitivity"
   genexpert_sensitivity: "GeneXpert sensitivity"
   detection_reduction: "Detection reduction"
-  post_covid_improvement: "Post-COVID19 detection improvement"
-  sustained_improvement: "Additional detection improvement factor"
+  post_covid_improvement: "Initial surge in detection post-COVID19"
+  sustained_improvement: "Sustained increase in detection post-COVID19"
   smear_positive_infect_multiplier: "Relative infectiousness of smear-positive TB"
   smear_negative_infect_multiplier: "Relative infectiousness of smear-negative TB"
   extrapulmonary_infect_multiplier: "Relative infectiousness of extrapulmonary TB"
@@ -30,14 +28,16 @@ descriptions:
   passive_screening_sensitivity_extrapulmonary: "Screening sensitivity for extrapulmonary TB"
   passive_screening_sensitivity_smear_negative: "Screening sensitivity for smear-negative TB"
   passive_screening_sensitivity_smear_positive: "Screening sensitivity for smear-positive TB"
+  smear_positive_death_rate: "Death rate for smear-positive TB"
+  smear_negative_death_rate: "Death rate for smear-negative and extrapulmonary TB"
+  smear_positive_self_recovery: "Self-recovery rate for smear-positive TB"
+  smear_negative_self_recovery: "Self-recovery rate for smear-negative and extrapulmonary TB"
 value:
   start_population_size: 1.0
   age_infectiousness_switch: 15.0
-  death_rate: 0.1
-  contact_rate: 36.203285817215914
-  self_recovery_rate: 0.34
-  rr_infection_latent: 0.12
-  rr_infection_recovered: 0.87
+  contact_rate: 130.743
+  rr_infection_latent: 0.242
+  rr_infection_recovered: 0.77
   age_latency:
     early_activation: 
       0: 2.4
@@ -57,32 +57,34 @@ value:
       15: 2.0
       35: 2.0
       50: 2.0
-  progression_multiplier : 0.7695143770102403
+  progression_multiplier : 1.3
   seed_time: 1881.5
   seed_duration: 19.55
   seed_rate: 70.65
-  screening_scaleup_shape: 0.055
-  screening_inflection_time: 2011.35
-  time_to_screening_end_asymp: 1.05
-  base_sensitivity: 0.4
-  genexpert_sensitivity: 0.826
+  screening_scaleup_shape: 0.016
+  screening_inflection_time: 2009.828
+  time_to_screening_end_asymp: 1.19
+  base_sensitivity: 0.465
+  genexpert_sensitivity: 0.933
   detection_reduction: 0.53
-  post_covid_improvement: 1.9226694724100577
-  sustained_improvement: 5.1324558252247225
+  post_covid_improvement: 2.08
+  sustained_improvement: 3.48
   smear_positive_infect_multiplier: 1.0
   smear_negative_infect_multiplier: 0.25
   extrapulmonary_infect_multiplier: 0.
-  incidence_props_pulmonary: 0.90
-  incidence_props_smear_positive_among_pulmonary: 0.70
+  incidence_props_pulmonary: 0.96
+  incidence_props_smear_positive_among_pulmonary: 0.85
   passive_screening_sensitivity_extrapulmonary: 0.5
   passive_screening_sensitivity_smear_negative: 0.7
   passive_screening_sensitivity_smear_positive: 1.0
+  smear_positive_death_rate: 0.407
+  smear_negative_death_rate: 0.029
+  smear_positive_self_recovery: 0.242
+  smear_negative_self_recovery: 0.129
 unit:
   start_population_size: "person"
   age_infectiousness_switch: "years old"
-  death_rate: "per year"
   contact_rate: "contacts per person per day"
-  self_recovery_rate: "per year"
   rr_infection_latent:  ""
   rr_infection_recovered: ""
   age_latency:
@@ -109,12 +111,14 @@ unit:
   passive_screening_sensitivity_extrapulmonary: ""
   passive_screening_sensitivity_smear_negative: ""
   passive_screening_sensitivity_smear_positive: ""
+  smear_positive_death_rate: ""
+  smear_negative_death_rate: ""
+  smear_positive_self_recovery: ""
+  smear_negative_self_recovery: ""
 sources:
   start_population_size: "A value to avoid dividing by zero in the force of infection calculation"
   age_infectiousness_switch: "Set based on duration of BCG protection [@nguipdop2016, @roy2019]"
-  death_rate: "United Nations Population Division data for Indonesia [@unwpp2024]"
   contact_rate: "Fitted [@ragonnet2022]"
-  self_recovery_rate: "Fitted [@ragonnet2020]"
   rr_infection_latent:  "Fitted [@andrews2012]"
   rr_infection_recovered: "Fitted [@andrews2012]"
   age_latency: "[@ragonnet2017]"
@@ -138,4 +142,8 @@ sources:
   passive_screening_sensitivity_extrapulmonary: ""
   passive_screening_sensitivity_smear_negative: ""
   passive_screening_sensitivity_smear_positive: ""
+  smear_positive_death_rate: ""
+  smear_negative_death_rate: ""
+  smear_positive_self_recovery: ""
+  smear_negative_self_recovery: ""
   

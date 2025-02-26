@@ -230,8 +230,9 @@ mortality: # estimated TB death per 100,000, WHO data
     2022: 51.18
     2023: 47.0
 
-prevalence: # Estimated bacteriologically confirmed pulmonary TB prevalence among population aged 15 years and above (per 100 000) from WHO 2013-2014 prevalence survey
-    2014: 759.1
+prevalence:
+    #2014: 759.1 # Estimated bacteriologically confirmed pulmonary TB prevalence among population aged 15 years and above (per 100 000) from WHO 2013-2014 prevalence survey
+    2014: 660.0 # All forms of TB, all age groups
 
 time_variant_bcg_perc:
     2000: 81.

@@ -83,10 +83,10 @@ def build_model(
     # TB natural history
     
     for source in infectious_compartments:
-        model.add_death_flow("TB_death", Parameter("death_rate"), source)
+        model.add_death_flow("TB_death", 1.0, source) # later adjusted by organ status
     
     for source in infectious_compartments:
-        model.add_transition_flow("self_recovery", Parameter("self_recovery_rate"), source, "recovered")
+        model.add_transition_flow("self_recovery", 1.0, source, "recovered") # later adjusted by organ status
 
     add_infection_flow(model) # add infection flow
     add_latency_flow(model) # add latency flow
