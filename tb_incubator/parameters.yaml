@@ -35,7 +35,7 @@ descriptions:
 value:
   start_population_size: 1.0
   age_infectiousness_switch: 15.0
-  contact_rate: 130.743
+  contact_rate: 113.83723984820261
   rr_infection_latent: 0.242
   rr_infection_recovered: 0.77
   age_latency:
@@ -57,18 +57,18 @@ value:
       15: 2.0
       35: 2.0
       50: 2.0
-  progression_multiplier : 1.3
+  progression_multiplier : 1.429615829051863
   seed_time: 1881.5
   seed_duration: 19.55
   seed_rate: 70.65
-  screening_scaleup_shape: 0.016
-  screening_inflection_time: 2009.828
-  time_to_screening_end_asymp: 1.19
-  base_sensitivity: 0.465
-  genexpert_sensitivity: 0.933
-  detection_reduction: 0.53
-  post_covid_improvement: 2.08
-  sustained_improvement: 3.48
+  screening_scaleup_shape: 0.22944939286707894
+  screening_inflection_time: 2009.1827315419955
+  time_to_screening_end_asymp: 1.5967320303362742
+  base_sensitivity: 0.38753192110420
+  genexpert_sensitivity: 0.9161617071597308
+  detection_reduction: 0.5440674224134151
+  post_covid_improvement: 1.6869817095757043
+  sustained_improvement: 1.0609712503688984
   smear_positive_infect_multiplier: 1.0
   smear_negative_infect_multiplier: 0.25
   extrapulmonary_infect_multiplier: 0.
@@ -77,10 +77,10 @@ value:
   passive_screening_sensitivity_extrapulmonary: 0.5
   passive_screening_sensitivity_smear_negative: 0.7
   passive_screening_sensitivity_smear_positive: 1.0
-  smear_positive_death_rate: 0.407
-  smear_negative_death_rate: 0.029
-  smear_positive_self_recovery: 0.242
-  smear_negative_self_recovery: 0.129
+  smear_positive_death_rate: 0.40620739693518426
+  smear_negative_death_rate: 0.02942082641987132
+  smear_positive_self_recovery: 0.23919700390242515
+  smear_negative_self_recovery: 0.13594600260796263
 unit:
   start_population_size: "person"
   age_infectiousness_switch: "years old"
