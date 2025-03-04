@@ -5,9 +5,11 @@ from matplotlib import pyplot as plt
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 
-from tb_incubator.utils import round_sigfig, get_target_from_name
+from tb_incubator.utils import round_sigfig, get_target_from_name, get_row_col_for_subplots
 from tb_incubator.model import build_model
 from tb_incubator.input import load_targets, load_param_info
+from tb_incubator.plotting import get_standard_subplot_fig
+from tb_incubator.constants import indicator_names, quantiles
 
 from estival import targets as est
 from estival import priors as esp
@@ -53,16 +55,16 @@ def get_all_priors() -> List:
         #esp.BetaPrior.from_mean_and_ci("rr_infection_recovered", 0.595, (0.2, 0.99)),
         #esp.TruncNormalPrior("self_recovery_rate", 0.350, 0.028, (0.200, 0.500)),
         esp.UniformPrior("screening_scaleup_shape", (0.01, 0.30)),
-        esp.TruncNormalPrior("screening_inflection_time", 2011, 3.0, (2001, 2021)),
-        esp.GammaPrior.from_mode("time_to_screening_end_asymp", 2.0, 5.0),
-        #esp.UniformPrior("seed_time", (1840.0, 1900.0)),  
+        esp.TruncNormalPrior("screening_inflection_time", 2006, 3.0, (1996, 2016)),
+        esp.GammaPrior.from_mode("time_to_screening_end_asymp", 2.0, 3.0),
+        #esp.UniformPrior("seed_time", (1800.0, 1850.0)),  
         #esp.UniformPrior("seed_duration", (1.0, 20.0)),
         #esp.UniformPrior("seed_rate", (1.0, 100.0)), 
-        esp.BetaPrior.from_mean_and_ci("base_sensitivity", 0.5, (0.2, 0.80)),
+        esp.BetaPrior.from_mean_and_ci("base_sensitivity", 0.55, (0.3, 0.80)),
         esp.BetaPrior.from_mean_and_ci("genexpert_sensitivity", 0.9, (0.80, 0.99)),
         esp.UniformPrior("detection_reduction", (0.2, 0.9)),
         esp.UniformPrior("post_covid_improvement", (1.0, 3.0)),
-        esp.UniformPrior("sustained_improvement", (1.0, 4.0)),
+        esp.UniformPrior("sustained_improvement", (1.0, 3.0)),
         #esp.BetaPrior.from_mean_and_ci("incidence_props_smear_positive_among_pulmonary", 0.8, (0.6, 0.99)),
         #esp.BetaPrior.from_mean_and_ci("incidence_props_pulmonary", 0.9, (0.7, 0.95)),
         esp.TruncNormalPrior("smear_positive_death_rate", 0.40, 0.028, (0.30, 0.50)),
@@ -323,3 +325,159 @@ def plot_posterior_comparison(
     plt.tight_layout(h_pad=1.0, w_pad=5)
     plt.close()
     return comparison_plot[0, 0].figure
+
+def plot_output_ranges(
+    quantile_outputs: Dict[str, pd.DataFrame],
+    target_data: Dict[str, pd.Series],
+    indicators: List[str],
+    n_cols: int,
+    plot_start_date: int = 1800,
+    plot_end_date: int = 2035,
+    history: bool = False,  # New argument
+    show_title: bool = True,
+    max_alpha: float = 0.7,
+) -> go.Figure:
+    """Plot the credible intervals with subplots for each output,
+    for a single run of interest.
+
+    Args:
+        quantile_outputs: Dataframes containing derived outputs of interest for each analysis type.
+        target_data: Calibration targets.
+        indicators: List of indicators to plot.
+        quantiles: List of quantiles for the patches to be plotted over.
+        n_cols: Number of columns for the subplots.
+        plot_start_date: Start year for the plot.
+        plot_end_date: End year for the plot.
+        max_alpha: Maximum alpha value to use in patches.
+        history: If True, set tick intervals to 50 years.
+
+    Returns:
+        The interactive Plotly figure.
+    """
+    nrows = int(np.ceil(len(indicators) / n_cols))
+    fig = get_standard_subplot_fig(
+        nrows,
+        n_cols,
+        (
+            [
+                (
+                    f"<b>{indicator_names[ind]}</b>"
+                    if ind in indicator_names
+                    else f"<b>{ind.replace('_', ' ').capitalize()}</b>"
+                )
+                for ind in indicators
+            ]
+            if show_title
+            else ["" for _ in indicators]
+        ),  # Conditionally set titles with bold tags
+    )
+    for annotation in fig['layout']['annotations']:
+        annotation['font'] = dict(size=12)  # Set font size for titles
+    
+
+    for i, ind in enumerate(indicators):
+        row, col = get_row_col_for_subplots(i, n_cols)
+        data = quantile_outputs[ind]
+
+        # Set plot_start_date to 2005 if the indicator is "prevalence_smear_positive"
+        current_plot_start_date = (
+            1850 if ind == "prevalence_smear_positive" else plot_start_date
+        )
+
+        # Filter data by date range
+        filtered_data = data[
+            (data.index >= current_plot_start_date) & (data.index <= plot_end_date)
+        ]
+
+        for q, quant in enumerate(quantiles):
+            if quant not in filtered_data.columns:
+                continue
+
+            alpha = (
+                min((quantiles.index(quant), len(quantiles) - quantiles.index(quant)))
+                / (len(quantiles) / 2)
+                * max_alpha
+            )
+            fill_color = f"rgba(0,30,180,{alpha})"
+
+            fig.add_trace(
+                go.Scatter(
+                    x=filtered_data.index,
+                    y=filtered_data[quant],
+                    fill="tonexty",
+                    fillcolor=fill_color,
+                    line={"width": 0},
+                    name=f"{quant}",
+                ),
+                row=row,
+                col=col,
+            )
+
+        # Plot the median line
+        if 0.5 in filtered_data.columns:
+            fig.add_trace(
+                go.Scatter(
+                    x=filtered_data.index,
+                    y=filtered_data[0.5],
+                    line={"color": "black"},
+                    name="median",
+                ),
+                row=row,
+                col=col,
+            )
+
+        # For other indicators, just plot the point estimate if available
+        if ind in target_data.keys():
+            target = target_data[ind]
+            filtered_target = target[
+                (target.index >= current_plot_start_date)
+                & (target.index <= plot_end_date)
+            ]
+
+            # Plot the target point estimates
+            fig.add_trace(
+                go.Scatter(
+                    x=filtered_target.index,
+                    y=filtered_target,
+                    mode="markers",
+                    marker={"size": 4.0, "color": "red"},
+                    name="",  # No name for legend
+                ),
+                row=row,
+                col=col,
+            )
+
+        # Update x-axis range to fit the filtered data
+        x_min = max(filtered_data.index.min(), current_plot_start_date)
+        x_max = filtered_data.index.max() + 1
+        fig.update_xaxes(range=[x_min, x_max], row=row, col=col)
+
+        # Update y-axis range dynamically for each subplot
+        y_min = 0
+        y_max = max(
+            filtered_data.max().max(),
+            filtered_target.max()
+                    if ind in target_data.keys()
+                    else float("-inf")
+        )
+        y_range = y_max - y_min
+        padding = 0.05 * y_range  # Consistent padding for all scenarios
+        fig.update_yaxes(range=[y_min - padding, y_max + padding], row=row, col=col)
+
+    tick_interval = 50 if history else 2  # Set tick interval based on history
+    fig.update_xaxes(
+        tickmode="linear",
+        tick0=plot_start_date,
+        dtick=tick_interval,  # Adjust tick increment
+    )
+
+    # Update layout for the whole figure
+    fig.update_layout(
+        xaxis_title="",
+        yaxis_title="",
+        showlegend=False,
+        margin=dict(l=10, r=5, t=30, b=40),
+    )
+
+    return fig
+

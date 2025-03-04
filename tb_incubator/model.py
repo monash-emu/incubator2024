@@ -117,7 +117,7 @@ def build_model(
     )
 
     # Organ-stratification
-    organ_strat = get_organ_strat(
+    organ_strat, base_detection, sensitivity, covid_impacts, sustained_improvement  = get_organ_strat(
         infectious_compartments,
         organ_strata,
         fixed_params,
@@ -125,6 +125,10 @@ def build_model(
         covid_effects=covid_effects,
     )
     model.stratify_with(organ_strat)
+    model.request_track_modelled_value("base_detection", base_detection)
+    model.request_track_modelled_value("sensitivity", sensitivity)
+    model.request_track_modelled_value("covid_impacts", covid_impacts)
+    model.request_track_modelled_value("sustained_improvement", sustained_improvement)
 
     desc.append(
         "The detection rate refers to the progression of individuals with active TB (I) "

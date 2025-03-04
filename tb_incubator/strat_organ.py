@@ -52,6 +52,7 @@ def get_organ_strat(
             1.0 / Parameter("time_to_screening_end_asymp")
         ]
     )
+    base_detection = detection_func
 
     ## xpert sensitivity
     sensitivity = Parameter("base_sensitivity")
@@ -124,4 +125,4 @@ def get_organ_strat(
 
     #strat.set_flow_adjustments("acf_detection", organ_adjs)
     
-    return strat
+    return strat, base_detection, sensitivity, covid_impacts, sustained_improvement

@@ -10,7 +10,7 @@ latent_compartments = ["early_latent", "late_latent"]
 infectious_compartments = ["infectious"]
 
 
-model_times = [1820, 2035]
+model_times = [1800, 2035]
 
 agegroup_request = [[0, 4], [5, 14], [15, 34], [35, 49], [50, 100]]
 age_strata = [i[0] for i in agegroup_request]
@@ -37,6 +37,8 @@ indicator_names = {
     "mortality": "TB deaths (per 100,000)",
     "detection_rate": "Detection rate",
 }
+
+quantiles = [0.025, 0.25, 0.5, 0.75, 0.975]
 
 
 def set_project_base_path(path: Path):

@@ -3,6 +3,9 @@ from math import log, exp
 import numpy as np
 import pandas as pd
 
+def get_row_col_for_subplots(i_panel, n_cols):
+    return int(np.floor(i_panel / n_cols)) + 1, i_panel % n_cols + 1
+
 def get_next_run_number(out_path, num_priors):
     """
     Find the next available run number for a specific number of priors.

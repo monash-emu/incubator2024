@@ -9,12 +9,6 @@ genexpert_utilisation:
     2022: 0.6
     2023: 0.62
 
-cases_conf_genexpert:
-    2019: 0.0
-    2020: 0.28
-    2021: 0.37
-    2022: 0.44
-
 treatment_coverage: 
     1995: 0.002
     1996: 0.008
@@ -92,7 +86,7 @@ notif2000: # WHO data
     2023: 804836
 
 
-notif: # WHO data
+notification: # WHO data
     1980: 25235
     1981: 32461
     1982: 33000

@@ -6,6 +6,28 @@ import numpy as np
 import pandas as pd
 from typing import List
 from pandas import DataFrame, Series
+from plotly.subplots import make_subplots
+
+def get_standard_subplot_fig(
+    n_rows: int, 
+    n_cols: int, 
+    titles: List[str],
+    share_y: bool=False,
+) -> go.Figure:
+    """Start a plotly figure with subplots off from standard formatting.
+
+    Args:
+        n_rows: Argument to pass through to make_subplots
+        n_cols: Pass through
+        titles: Pass through
+
+    Returns:
+        Figure with nothing plotted
+    """
+    heights = [320, 600, 680]
+    height = 680 if n_rows > 3 else heights[n_rows - 1]
+    fig = make_subplots(n_rows, n_cols, subplot_titles=titles, vertical_spacing=0.08, horizontal_spacing=0.05, shared_yaxes=share_y)
+    return fig.update_layout(margin={i: 25 for i in ['t', 'b', 'l', 'r']}, height=height)
 
 def plot_model_vs_actual(
     modeled_df: DataFrame,
