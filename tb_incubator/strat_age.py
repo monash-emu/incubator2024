@@ -56,7 +56,7 @@ def set_latency_adjs(params: Dict[str, any], age_strata: List[int], strat: AgeSt
             age_val = latency_params[param_age_bracket]
 
             adj = (
-                Parameter("progression_multiplier") * age_val
+                1.0 * age_val
                 if "_activation" in flow_name
                 else age_val
             )

@@ -3,6 +3,82 @@ from math import log, exp
 import numpy as np
 import pandas as pd
 
+def get_param_table(param_info, prior_names=None):
+    """
+    Get parameter info in a tidy pd.Dataframe format.
+    
+    Args:
+        param_info: Dictionary containing parameter information
+        prior_names: List of parameter names that should be marked as "Calibrated"
+                    rather than showing their values
+    
+    Returns:
+        pd.DataFrame: Formatted parameter table
+    """
+    if prior_names is None:
+        prior_names = []
+        
+    param_table = []
+    for key in param_info["value"]:
+        if isinstance(param_info["value"][key], dict):
+            if key in param_info["unit"]:
+                for subkey, value in param_info["value"][key].items():
+                    # Create full parameter name for checking calibration status
+                    param_name = f"{key}.{subkey}"
+                    
+                    # Format value based on whether it's calibrated
+                    if param_name in prior_names:
+                        value_str = "Calibrated"
+                    else:
+                        # Handle dictionary values
+                        if isinstance(value, dict):
+                            value_str = "/".join(f"{k}: {v}" for k, v in value.items())
+                        else:
+                            # Round numerical values
+                            value_str = str(round(value, 3) if value != 0.0 else 0.0)
+                    
+                    param_table.append(
+                        {
+                            "Parameter": f"{param_info['descriptions'][key][subkey]}",
+                            "Value": value_str,
+                            "Unit": param_info["unit"][key][subkey],
+                            "Source": param_info["sources"][key],
+                        }
+                    )
+        else:
+            # Check if this parameter is calibrated
+            if key in prior_names:
+                value_str = "Calibrated"
+            else:
+                # Round numerical values
+                value = param_info["value"][key]
+                value_str = str(round(value, 3) if value != 0.0 else 0.0)
+            
+            param_table.append(
+                {
+                    "Parameter": param_info["descriptions"][key],
+                    "Value": value_str,
+                    "Unit": param_info["unit"][key],
+                    "Source": param_info["sources"][key],
+                }
+            )
+
+    # Create DataFrame and set index
+    fixed_param_table = pd.DataFrame(param_table)
+    fixed_param_table = fixed_param_table.set_index("Parameter")
+    
+    # Format column names
+    fixed_param_table.columns = fixed_param_table.columns.str.capitalize()
+    
+    # Reorder columns to match the second example if desired
+    fixed_param_table = fixed_param_table[["Value", "Unit", "Source"]]
+    
+    # Capitalize units
+    fixed_param_table["Unit"] = fixed_param_table["Unit"].str.capitalize()
+
+    return fixed_param_table
+
+
 def get_row_col_for_subplots(i_panel, n_cols):
     return int(np.floor(i_panel / n_cols)) + 1, i_panel % n_cols + 1
 

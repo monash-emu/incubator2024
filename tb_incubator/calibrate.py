@@ -50,21 +50,21 @@ def get_all_priors() -> List:
     """
     priors = [
         esp.UniformPrior("contact_rate", (0.1, 300.0)),
-        esp.UniformPrior("progression_multiplier", (1.0,  2.0)),
+        #esp.UniformPrior("progression_multiplier", (1.0,  2.0)),
         #esp.BetaPrior.from_mean_and_ci("rr_infection_latent", 0.24, (0.18, 0.30)),
         #esp.BetaPrior.from_mean_and_ci("rr_infection_recovered", 0.595, (0.2, 0.99)),
         #esp.TruncNormalPrior("self_recovery_rate", 0.350, 0.028, (0.200, 0.500)),
         esp.UniformPrior("screening_scaleup_shape", (0.01, 0.30)),
-        esp.TruncNormalPrior("screening_inflection_time", 2006, 3.0, (1996, 2016)),
-        esp.GammaPrior.from_mode("time_to_screening_end_asymp", 2.0, 3.0),
+        esp.UniformPrior("screening_inflection_time", (1990, 2018)),
+        esp.UniformPrior("time_to_screening_end_asymp", (0.4, 3.0)),
         #esp.UniformPrior("seed_time", (1800.0, 1850.0)),  
         #esp.UniformPrior("seed_duration", (1.0, 20.0)),
         #esp.UniformPrior("seed_rate", (1.0, 100.0)), 
-        esp.BetaPrior.from_mean_and_ci("base_sensitivity", 0.55, (0.3, 0.80)),
+        esp.UniformPrior("base_sensitivity", (0.1, 1.0)),
         esp.BetaPrior.from_mean_and_ci("genexpert_sensitivity", 0.9, (0.80, 0.99)),
         esp.UniformPrior("detection_reduction", (0.2, 0.9)),
         esp.UniformPrior("post_covid_improvement", (1.0, 3.0)),
-        esp.UniformPrior("sustained_improvement", (1.0, 3.0)),
+        #esp.UniformPrior("sustained_improvement", (1.0, 3.0)),
         #esp.BetaPrior.from_mean_and_ci("incidence_props_smear_positive_among_pulmonary", 0.8, (0.6, 0.99)),
         #esp.BetaPrior.from_mean_and_ci("incidence_props_pulmonary", 0.9, (0.7, 0.95)),
         esp.TruncNormalPrior("smear_positive_death_rate", 0.40, 0.028, (0.30, 0.50)),
@@ -333,26 +333,30 @@ def plot_output_ranges(
     n_cols: int,
     plot_start_date: int = 1800,
     plot_end_date: int = 2035,
-    history: bool = False,  # New argument
+    target_data_start_date: int = 2013,
+    history: bool = False,
     show_title: bool = True,
     max_alpha: float = 0.7,
+    show_legend: bool = False
 ) -> go.Figure:
-    """Plot the credible intervals with subplots for each output,
-    for a single run of interest.
+    """
+    Plot the credible intervals with subplots for each output, for a single run of interest.
 
     Args:
         quantile_outputs: Dataframes containing derived outputs of interest for each analysis type.
         target_data: Calibration targets.
         indicators: List of indicators to plot.
-        quantiles: List of quantiles for the patches to be plotted over.
         n_cols: Number of columns for the subplots.
         plot_start_date: Start year for the plot.
         plot_end_date: End year for the plot.
-        max_alpha: Maximum alpha value to use in patches.
+        target_data_start_date: Start year for the target data.
         history: If True, set tick intervals to 50 years.
+        max_alpha: Maximum alpha value to use in patches.
+        show_title: Show figure title.
+        show_legend: Show figure legend.
 
-    Returns:
-        The interactive Plotly figure.
+    Return:
+        The interactive figure
     """
     nrows = int(np.ceil(len(indicators) / n_cols))
     fig = get_standard_subplot_fig(
@@ -374,12 +378,15 @@ def plot_output_ranges(
     for annotation in fig['layout']['annotations']:
         annotation['font'] = dict(size=12)  # Set font size for titles
     
+    # Track if we've added legend entries already
+    added_actual_legend = False
+    added_target_legend = False
 
     for i, ind in enumerate(indicators):
         row, col = get_row_col_for_subplots(i, n_cols)
         data = quantile_outputs[ind]
 
-        # Set plot_start_date to 2005 if the indicator is "prevalence_smear_positive"
+        # Set plot_start_date to 1850 if the indicator is "prevalence_smear_positive"
         current_plot_start_date = (
             1850 if ind == "prevalence_smear_positive" else plot_start_date
         )
@@ -408,6 +415,7 @@ def plot_output_ranges(
                     fillcolor=fill_color,
                     line={"width": 0},
                     name=f"{quant}",
+                    showlegend=False,  # Hide from legend
                 ),
                 row=row,
                 col=col,
@@ -421,6 +429,7 @@ def plot_output_ranges(
                     y=filtered_data[0.5],
                     line={"color": "black"},
                     name="median",
+                    showlegend=False,  # Hide from legend
                 ),
                 row=row,
                 col=col,
@@ -430,22 +439,62 @@ def plot_output_ranges(
         if ind in target_data.keys():
             target = target_data[ind]
             filtered_target = target[
-                (target.index >= current_plot_start_date)
+                (target.index >= plot_start_date)
+                & (target.index <= target_data_start_date - 1)  # Only older data
+            ]
+
+            if not filtered_target.empty:
+                # Plot the historical data points
+                fig.add_trace(
+                    go.Scatter(
+                        x=filtered_target.index,
+                        y=filtered_target,
+                        mode="markers",
+                        marker={"size": 4.0, "color": "#FF6347"},  # Tomato color
+                        name="Historical data",
+                        showlegend=show_legend and not added_actual_legend,  # Show in legend only once if enabled
+                    ),
+                    row=row,
+                    col=col,
+                )
+                added_actual_legend = True
+
+        # Plot the point estimates, start from the target_data_start_date
+        if ind in target_data.keys():
+            target = target_data[ind]
+            filtered_target = target[
+                (target.index >= target_data_start_date)
                 & (target.index <= plot_end_date)
             ]
 
-            # Plot the target point estimates
-            fig.add_trace(
-                go.Scatter(
-                    x=filtered_target.index,
-                    y=filtered_target,
-                    mode="markers",
-                    marker={"size": 4.0, "color": "red"},
-                    name="",  # No name for legend
-                ),
-                row=row,
-                col=col,
-            )
+            if not filtered_target.empty:
+                # Plot the target point estimates
+                fig.add_trace(
+                    go.Scatter(
+                        x=filtered_target.index,
+                        y=filtered_target,
+                        mode="markers",
+                        marker={"size": 4.0, "color": "#AFEEEE"},  # Pale Turquoise color
+                        name="Target data",
+                        showlegend=show_legend and not added_target_legend,  # Show in legend only once if enabled
+                    ),
+                    row=row,
+                    col=col,
+                )
+                added_target_legend = True
+        
+        # Get all y values for scaling
+        all_y_values = []
+        if 0.5 in filtered_data.columns:
+            all_y_values.extend(filtered_data[0.5].tolist())
+        
+        if ind in target_data.keys():
+            all_target = target_data[ind]
+            filtered_all_target = all_target[
+                (all_target.index >= plot_start_date)
+                & (all_target.index <= plot_end_date)
+            ]
+            all_y_values.extend(filtered_all_target.tolist())
 
         # Update x-axis range to fit the filtered data
         x_min = max(filtered_data.index.min(), current_plot_start_date)
@@ -453,16 +502,12 @@ def plot_output_ranges(
         fig.update_xaxes(range=[x_min, x_max], row=row, col=col)
 
         # Update y-axis range dynamically for each subplot
-        y_min = 0
-        y_max = max(
-            filtered_data.max().max(),
-            filtered_target.max()
-                    if ind in target_data.keys()
-                    else float("-inf")
-        )
-        y_range = y_max - y_min
-        padding = 0.05 * y_range  # Consistent padding for all scenarios
-        fig.update_yaxes(range=[y_min - padding, y_max + padding], row=row, col=col)
+        if all_y_values:
+            y_min = 0
+            y_max = max(all_y_values)
+            y_range = y_max - y_min
+            padding = 0.3 * y_range  # Consistent padding for all scenarios
+            fig.update_yaxes(range=[y_min, y_max + padding], row=row, col=col)
 
     tick_interval = 50 if history else 2  # Set tick interval based on history
     fig.update_xaxes(
@@ -475,8 +520,16 @@ def plot_output_ranges(
     fig.update_layout(
         xaxis_title="",
         yaxis_title="",
-        showlegend=False,
-        margin=dict(l=10, r=5, t=30, b=40),
+        showlegend=show_legend,  # Use the parameter
+        legend=dict(
+            orientation="h",  # Horizontal legend
+            yanchor="top",
+            y=-0.20,  # Position below the plot
+            xanchor="center",
+            x=0.5,
+            font=dict(size=10),
+        ) if show_legend else None,
+        margin=dict(l=10, r=5, t=50, b=50),
     )
 
     return fig

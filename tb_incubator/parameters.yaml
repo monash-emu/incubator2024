@@ -8,7 +8,7 @@ descriptions:
     early_activation: "Rate of rapid progression to active TB, based on age groups"
     late_activation: "Rate of late reactivation, based on age groups"
     stabilisation: "Rate of stabilization from early to late latency, based on age groups"
-  progression_multiplier: "TB progression multiplier"
+  #progression_multiplier: "TB progression multiplier"
   seed_time: "Seed time"
   seed_duration: "Seed duration"
   seed_rate: "Seed rate"
@@ -19,7 +19,7 @@ descriptions:
   genexpert_sensitivity: "GeneXpert sensitivity"
   detection_reduction: "Detection reduction"
   post_covid_improvement: "Initial surge in detection post-COVID19"
-  sustained_improvement: "Sustained increase in detection post-COVID19"
+  #sustained_improvement: "Sustained increase in detection post-COVID19"
   smear_positive_infect_multiplier: "Relative infectiousness of smear-positive TB"
   smear_negative_infect_multiplier: "Relative infectiousness of smear-negative TB"
   extrapulmonary_infect_multiplier: "Relative infectiousness of extrapulmonary TB"
@@ -57,7 +57,7 @@ value:
       15: 2.0
       35: 2.0
       50: 2.0
-  progression_multiplier : 1.429615829051863
+  #progression_multiplier : 1.429615829051863
   seed_time: 1881.5
   seed_duration: 19.55
   seed_rate: 70.65
@@ -68,7 +68,7 @@ value:
   genexpert_sensitivity: 0.9250460440831155
   detection_reduction: 0.5177867790242664
   post_covid_improvement: 2.383582891292852
-  sustained_improvement: 1.572801967999842
+  #sustained_improvement: 1.572801967999842
   smear_positive_infect_multiplier: 1.0
   smear_negative_infect_multiplier: 0.25
   extrapulmonary_infect_multiplier: 0.
@@ -91,7 +91,7 @@ unit:
     early_activation: "per year"
     late_activation: "per year"
     stabilisation: "per year"
-  progression_multiplier: 
+  #progression_multiplier: 
   seed_time: ""
   seed_duration: "days"
   seed_rate: "persons per day"
@@ -102,7 +102,7 @@ unit:
   genexpert_sensitivity: ""
   detection_reduction: ""
   post_covid_improvement: ""
-  sustained_improvement: ""
+  #sustained_improvement: ""
   smear_positive_infect_multiplier: ""
   smear_negative_infect_multiplier: ""
   extrapulmonary_infect_multiplier: ""
@@ -122,7 +122,7 @@ sources:
   rr_infection_latent:  "Fitted [@andrews2012]"
   rr_infection_recovered: "Fitted [@andrews2012]"
   age_latency: "[@ragonnet2017]"
-  progression_multiplier: "Fitted [@ragonnet2022]"
+  #progression_multiplier: "Fitted [@ragonnet2022]"
   seed_time: "Fitted [@ragonnet2022]"
   seed_duration: "Fitted [@ragonnet2022]"
   seed_rate: "Fitted [@ragonnet2022]"
@@ -133,7 +133,7 @@ sources:
   genexpert_sensitivity: "Fitted"
   detection_reduction: "Fitted"
   post_covid_improvement: "Fitted"
-  sustained_improvement: "Fitted"
+  #sustained_improvement: "Fitted"
   smear_positive_infect_multiplier: ""
   smear_negative_infect_multiplier: ""
   extrapulmonary_infect_multiplier: ""

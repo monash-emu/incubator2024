@@ -74,39 +74,6 @@ def load_param_info() -> pd.DataFrame:
     return param_info
 
 
-def get_param_table(param_info):
-    """
-    Get parameter info in a tidy pd.Dataframe format.
-    """
-    param_table = []
-    for key in param_info["value"]:
-        if isinstance(param_info["value"][key], dict):
-            if key in param_info["unit"]:
-                for subkey, value in param_info["value"][key].items():
-                    value_str = "/".join(f"{k}: {v}" for k, v in value.items())
-                    param_table.append(
-                        {
-                            "Parameter": f"{param_info['descriptions'][key][subkey]}",
-                            "Value": value_str,
-                            "Unit": param_info["unit"][key][subkey],
-                            "Source": param_info["sources"][key],
-                        }
-                    )
-        else:
-            param_table.append(
-                {
-                    "Parameter": param_info["descriptions"][key],
-                    "Value": param_info["value"][key],
-                    "Unit": param_info["unit"][key],
-                    "Source": param_info["sources"][key],
-                }
-            )
-
-    fixed_param_table = pd.DataFrame(param_table)
-    fixed_param_table = fixed_param_table.set_index("Parameter")
-
-    return fixed_param_table
-
 def get_age_groups_in_range(age_groups, lower_limit, upper_limit):
     """
     Retrieves age groups within a specified age range from a list of age groups.

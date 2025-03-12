@@ -52,7 +52,8 @@ def build_model(
         "of being infected by Mycobacterium tuberculosis. "
         "Latent TB infection is modelled using two compartments: early latent (E) and late latent (L). "
         "Latently infected individuals who progress to active TB move to the infectious (I) compartment. "
-        "Those who recover through self-recovery are transferred to the recovery (R) compartment.\n\n"
+        "Those who recover through self-recovery are transferred to the recovery (R) compartment."
+        "Individuals who are detected are assumed to undergo treatment and fully recovered, hence they move from I to R.\n\n"
     )
 
 
@@ -60,7 +61,7 @@ def build_model(
     seed_infectious(model) # seed infectious individuals
 
     desc.append(
-        f"Our model predicts the TB dynamics from {model_times[0]} to {model_times[1]}. "
+        f"The model is run from {model_times[0]} to {model_times[1]}, with an aim to capture the dynamics between the mid-1990s and 2024."
         f"We mostly used estimates from previous study [@ragonnet2022] to inform TB progression "
         "and natural history of TB. "
         "We also fitted some parameters to local data on TB notifications [@whotb2023] and prevalence [@indoprevsurv2015], while "
@@ -117,7 +118,7 @@ def build_model(
     )
 
     # Organ-stratification
-    organ_strat, base_detection, sensitivity, covid_impacts, sustained_improvement  = get_organ_strat(
+    organ_strat, base_detection, sensitivity, covid_impacts, final_detection = get_organ_strat(
         infectious_compartments,
         organ_strata,
         fixed_params,
@@ -128,7 +129,7 @@ def build_model(
     model.request_track_modelled_value("base_detection", base_detection)
     model.request_track_modelled_value("sensitivity", sensitivity)
     model.request_track_modelled_value("covid_impacts", covid_impacts)
-    model.request_track_modelled_value("sustained_improvement", sustained_improvement)
+    model.request_track_modelled_value("final_detection", final_detection)
 
     desc.append(
         "The detection rate refers to the progression of individuals with active TB (I) "

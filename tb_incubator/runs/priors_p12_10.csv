@@ -1,0 +1,13 @@
+,Distribution,Parameters,Support
+Contact rate,Uniform distribution,loc: 0.1 scale: 299.9,0.1 to 300.0
+Passive screening shape,Uniform distribution,loc: 0.01 scale: 0.29,0.01 to 0.3
+Passive screening inflection time,Uniform distribution,loc: 1990 scale: 28,1990.0 to 2020.0
+Time from active TB to be screened,Uniform distribution,loc: 0.4 scale: 2.6,0.4 to 3.0
+Preceding diagnostic algorithm sensitivity,Uniform distribution,loc: 0.1 scale: 0.9,0.1 to 1.0
+GeneXpert sensitivity,Beta distribution,a: 36.665 b: 4.074,0.0 to 1.0
+Detection reduction,Uniform distribution,loc: 0.2 scale: 0.7,0.2 to 0.9
+Initial surge in detection post-COVID19,Uniform distribution,loc: 1.0 scale: 2.0,1.0 to 3.0
+Death rate for smear-positive TB,TruncNormal distribution,loc: 0.4 scale: 0.028 a: -3.571 b: 3.571,0.3 to 0.5
+Death rate for smear-negative and extrapulmonary TB,TruncNormal distribution,loc: 0.03 scale: 0.005 a: -4.348 b: 4.348,0.01 to 0.05
+Self-recovery rate for smear-positive TB,TruncNormal distribution,loc: 0.248 scale: 0.02 a: -7.4 b: 12.6,0.1 to 0.5
+Self-recovery rate for smear-negative and extrapulmonary TB,TruncNormal distribution,loc: 0.13 scale: 0.02 a: -4.0 b: 3.95,0.05 to 0.209

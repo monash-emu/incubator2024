@@ -72,9 +72,10 @@ def get_organ_strat(
         )
         detection_func = detection_func * covid_impacts
         ### post-COVID sustained improvement
-        sustained_improvement = get_linear_interpolation_function([2022.0, model_times[-1]], [1.0, Parameter("sustained_improvement")])
-        detection_func = detection_func * sustained_improvement
-
+        #sustained_improvement = get_linear_interpolation_function([2022.0, model_times[-1]], [1.0, Parameter("sustained_improvement")])
+        #detection_func = detection_func * sustained_improvement
+    
+    final_detection = detection_func
 
     # Detection, self-recovery and infect death
     inf_adj, detection_adjs, infect_death_adjs, self_recovery_adjustments = {}, {}, {}, {}
@@ -125,4 +126,4 @@ def get_organ_strat(
 
     #strat.set_flow_adjustments("acf_detection", organ_adjs)
     
-    return strat, base_detection, sensitivity, covid_impacts, sustained_improvement
+    return strat, base_detection, sensitivity, covid_impacts, final_detection

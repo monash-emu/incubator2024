@@ -7,6 +7,143 @@ import pandas as pd
 from typing import List
 from pandas import DataFrame, Series
 from plotly.subplots import make_subplots
+    
+
+def plot_tracked_outputs(
+        outs: pd.DataFrame, 
+        output_keys: List[str], 
+        layout = (2, 2), 
+        plot_start_date: int = 1980, 
+        plot_end_date = None, 
+        show_legend: bool = False, 
+        show_title: bool = True
+):
+    """
+    Creates a subplot figure to visualize tracked model outputs with a flexible layout,
+    using clean styling similar to the standard output plots.
+    
+    Parameters:
+    -----------
+    outs : Dictionary or DataFrame containing the output timeseries to plot.
+    output_keys : List of output keys to plot. Must be provided.
+    layout : Tuple of (rows, cols) specifying the subplot layout, default is (2, 2).
+    display_format : Format for saving the figure, default is "svg".
+    plot_start_date : Start year for the plot. Default is 1980.
+    plot_end_date : End year for the plot. Default is None (use data max).
+    show_legend : Show figure legend. Default is False.
+    show_title : Show subplot titles. Default is True.
+    
+    Returns:
+    --------
+    fig : plotly.graph_objects.Figure
+        The plotly figure object
+    """
+  
+    if output_keys is None or len(output_keys) == 0:
+        raise ValueError("Error: List of output keys must be provided.")
+    
+    # Limit output_keys to what can fit in the layout
+    n_rows, n_cols = layout
+    max_plots = n_rows * n_cols
+    if len(output_keys) > max_plots:
+        print(f"Warning: Limiting to {max_plots} plots due to layout constraints")
+        output_keys = output_keys[:max_plots]
+    
+    # Create subplot titles with proper formatting
+    subplot_titles = []
+    for key in output_keys:
+        if show_title:
+            # Format like the example with bold tags
+            formatted_title = f"<b>{key.replace('_', ' ').title()}</b>"
+            subplot_titles.append(formatted_title)
+        else:
+            subplot_titles.append("")
+    
+    # Pad subplot_titles with empty strings if needed
+    subplot_titles.extend([''] * (max_plots - len(subplot_titles)))
+    
+    # Create subplots
+    fig = make_subplots(
+        rows=n_rows, 
+        cols=n_cols,
+        subplot_titles=subplot_titles
+    )
+    
+    # Update subplot title font size
+    for annotation in fig['layout']['annotations']:
+        annotation['font'] = dict(size=12)
+    
+    # Add traces to the subplots
+    for i, key in enumerate(output_keys):
+        row = i // n_cols + 1
+        col = i % n_cols + 1
+        
+        if key in outs:
+            data = outs[key]
+            
+            # Filter data by date range if needed
+            if plot_end_date is None:
+                plot_end_date = data.index.max()
+                
+            filtered_data = data[
+                (data.index >= plot_start_date) & (data.index <= plot_end_date)
+            ]
+            
+            # Main line trace in black
+            fig.add_trace(
+                go.Scatter(
+                    x=filtered_data.index,
+                    y=filtered_data.values,
+                    line={"color": "black", "width": 1.5},
+                    name=key,
+                    showlegend=show_legend,
+                ),
+                row=row, 
+                col=col
+            )
+            
+            # Get all y values for scaling
+            all_y_values = filtered_data.values.tolist()
+            
+            # Update x-axis range
+            x_min = max(filtered_data.index.min(), plot_start_date)
+            x_max = filtered_data.index.max() + 1
+            fig.update_xaxes(range=[x_min, x_max], row=row, col=col)
+            
+            # Update y-axis range dynamically for each subplot
+            if all_y_values:
+                y_min = 0
+                y_max = max(all_y_values)
+                y_range = y_max - y_min
+                padding = 0.3 * y_range  # Add padding above the maximum value
+                fig.update_yaxes(range=[y_min, y_max + padding], row=row, col=col)
+        else:
+            print(f"Warning: Key '{key}' not found in the outputs")
+    
+    # Set tick interval
+    fig.update_xaxes(
+        tickmode="linear",
+        tick0=plot_start_date,
+        dtick=2,  # 2-year interval
+    )
+    
+    # Update layout for the whole figure
+    fig.update_layout(
+        xaxis_title="",
+        yaxis_title="",
+        showlegend=show_legend,
+        legend=dict(
+            orientation="h",  # Horizontal legend
+            yanchor="top",
+            y=-0.20,  # Position below the plot
+            xanchor="center",
+            x=0.5,
+            font=dict(size=10),
+        ) if show_legend else None,
+        margin=dict(l=10, r=5, t=50, b=50),
+    )
+    
+    return fig
 
 def get_standard_subplot_fig(
     n_rows: int, 
