@@ -4,10 +4,403 @@ import plotly.express as px
 import plotly.graph_objects as go
 import numpy as np
 import pandas as pd
-from typing import List
+from typing import List, Dict
 from pandas import DataFrame, Series
 from plotly.subplots import make_subplots
-    
+import arviz as az
+import plotly.io as pio
+import tb_incubator.constants as const
+from tb_incubator.constants import indicator_names, quantiles
+from tb_incubator.utils import get_row_col_for_subplots
+
+scenario_names = const.scenario_names
+
+def plot_scenario_output_ranges(
+    scenario_outputs: Dict[str, Dict[str, pd.DataFrame]],
+    indicators: List[str],
+    n_cols: int,
+    plot_start_date: int = 1800,
+    plot_end_date: int = 2023,
+    max_alpha: float = 0.7,
+) -> go.Figure:
+    """
+    Plot the credible intervals for each indicator in a single plot across multiple scenarios.
+
+    Args:
+        scenario_outputs: Dictionary containing scenario outputs, with scenario names as keys.
+        indicators: List of indicators to plot.
+        n_cols: Number of columns for the subplots.
+        plot_start_date: Start year for the plot.
+        plot_end_date: End year for the plot.
+        max_alpha: Maximum alpha value to use in patches.
+
+    Returns:
+        The interactive Plotly figure.
+    """
+    nrows = int(np.ceil(len(indicators) / n_cols))
+    fig = get_standard_subplot_fig(
+        nrows,
+        n_cols,
+        [
+            (
+                f"<b>{indicator_names[ind]}</b>"
+                if ind in indicator_names
+                else f"<b>{ind.replace('_', ' ').capitalize()}</b>"
+            )
+            for ind in indicators
+        ],
+    )
+    for annotation in fig['layout']['annotations']:
+        annotation['font'] = dict(size=12)  # Set font size for titles
+
+    base_color = (0, 30, 180)  # Base scenario RGB color as a tuple
+    target_color = "red"  # Use a consistent color for 2035 target points
+    scenario_colors = (
+        px.colors.qualitative.Plotly
+    )  # Use Plotly colors for other scenarios
+
+    for i, ind in enumerate(indicators):
+        row, col = get_row_col_for_subplots(i, n_cols)
+        for scenario_idx, (scenario_name, quantile_outputs) in enumerate(
+            scenario_outputs.items()
+        ):
+            display_name = scenario_names.get(
+                scenario_name, scenario_name
+            )  # Get display name
+
+            # Determine the color to use for this scenario
+            if (
+                scenario_name.lower() == "base_scenario"
+            ):  # Check if it's the base scenario
+                rgb_color = base_color
+            else:
+                hex_color = scenario_colors[scenario_idx % len(scenario_colors)]
+                rgb_color = hex_to_rgb(hex_color)  # Convert hex to RGB tuple
+
+            data = quantile_outputs[ind]
+
+            # Filter data by date range
+            filtered_data = data[
+                (data.index >= plot_start_date) & (data.index <= plot_end_date)
+            ]
+
+            # Show the legend only for the first indicator
+            show_legend = i == 0
+
+            for q, quant in enumerate(quantiles):
+                if quant not in filtered_data.columns:
+                    continue
+
+                alpha = (
+                    min(
+                        (
+                            quantiles.index(quant),
+                            len(quantiles) - quantiles.index(quant),
+                        )
+                    )
+                    / (len(quantiles) / 2)
+                    * max_alpha
+                )
+                fill_color = f"rgba({rgb_color[0]}, {rgb_color[1]}, {rgb_color[2]}, {alpha})"  # Use rgba with appropriate alpha
+
+                fig.add_trace(
+                    go.Scatter(
+                        x=filtered_data.index,
+                        y=filtered_data[quant],
+                        fill="tonexty",
+                        fillcolor=fill_color,
+                        mode="lines",
+                        line={"width": 0},
+                        name=(
+                            display_name if quant == 0.5 and show_legend else None
+                        ),  # Show legend only for the first figure
+                        showlegend=quant == 0.5
+                        and show_legend,  # Show legend only for the first figure
+                        legendgroup=display_name,
+                    ),
+                    row=row,
+                    col=col,
+                )
+
+            # Plot the median line
+            if 0.5 in filtered_data.columns:
+                fig.add_trace(
+                    go.Scatter(
+                        x=filtered_data.index,
+                        y=filtered_data[0.5],
+                        mode="markers+lines",
+                        line={
+                            "color": f"rgb({rgb_color[0]}, {rgb_color[1]}, {rgb_color[2]})"
+                        },
+                        name=(
+                            display_name if show_legend else None
+                        ),  # Show legend only for the first figure
+                        showlegend=False,
+                    ),
+                    row=row,
+                    col=col,
+                )
+
+        # Add specific points for "incidence" and "mortality_raw" at 2035 with consistent color
+        if ind == "incidence":
+            fig.add_trace(
+                go.Scatter(
+                    x=[2030],
+                    y=[65],
+                    mode="markers",
+                    marker=dict(size=4, color=target_color),
+                    name="2030 National TB Elimination Target",
+                    showlegend=True if i == 0 else False,  # Show legend only once
+                    legendgroup="Target",
+                ),
+                row=row,
+                col=col,
+            )
+
+        if ind == "mortality":
+            fig.add_trace(
+                go.Scatter(
+                    x=[2030],
+                    y=[6],
+                    mode="markers",
+                    marker=dict(size=4, color=target_color),
+                    showlegend=False,  # No additional legend entry for repeated points
+                    legendgroup="Target",
+                ),
+                row=row,
+                col=col,
+            )
+
+    # Update layout for the whole figure
+    # Calculate dynamic margin based on number of legend entries
+    legend_items = len([s for s in scenario_outputs.keys()])
+    legend_rows = np.ceil(legend_items / 3)  # Assume roughly 3 items per row
+    bottom_margin = max(80, 40 + 25 * legend_rows)  # Base margin + extra per row
+
+    fig.update_layout(
+        title="",
+        xaxis_title="",
+        yaxis_title="",
+        showlegend=True,
+        margin=dict(l=50, r=50, t=50, b=bottom_margin),  # Dynamic bottom margin
+        legend=dict(
+            title="",
+            orientation="h",
+            yanchor="top",
+            y=-0.2,  # Position relative to bottom margin
+            xanchor="center",
+            x=0.5,
+            font=dict(size=10),
+        ),
+    )
+
+    # Update x-axis ticks to increase by 1 year
+    fig.update_xaxes(
+        tickmode="linear",
+        tick0=plot_start_date,
+        dtick=1,  # Set tick increment to 1 year
+    )
+
+    return fig
+
+def plot_scenario_output_ranges_by_col(
+    scenario_outputs: Dict[str, Dict[str, pd.DataFrame]],
+    plot_start_date: float = 2025.0,
+    plot_end_date: float = 2036.0,
+    max_alpha: float = 0.7,
+) -> go.Figure:
+    """
+    Plot the credible intervals for incidence and mortality_raw with scenarios as rows.
+    Also plot 2030 SDG targets in purple and 2035 End TB targets in red.
+
+    Args:
+        scenario_outputs: Dictionary containing scenario outputs, with scenario names as keys.
+        plot_start_date: Start year for the plot as float.
+        plot_end_date: End year for the plot as float.
+        max_alpha: Maximum alpha value to use in patches.
+
+    Returns:
+        The interactive Plotly figure.
+    """
+    indicators = ["incidence", "mortality"]
+    n_scenarios = len(scenario_outputs)
+    n_cols = 2
+
+    # Define the color scheme using Plotly's qualitative palette
+    colors = px.colors.qualitative.Plotly
+    indicator_colors = {
+        ind: colors[i % len(colors)] for i, ind in enumerate(indicators)
+    }
+
+    # Define the scenario titles manually
+    y_axis_titles = ["Status-quo scenario", "Scenario 1", "Scenario 2", "Scenario 3"]
+
+    # Create the subplots without shared y-axis
+    fig = make_subplots(
+        rows=n_scenarios,
+        cols=n_cols,
+        shared_yaxes=False,
+        vertical_spacing=0.05,
+        horizontal_spacing=0.05,
+        column_titles=[
+            "<b>TB incidence (per 100,000 populations)</b>",
+            "<b>TB deaths (per 100,000 populations)</b>",
+        ],  # Titles for columns
+    )
+    for annotation in fig['layout']['annotations']:
+        annotation['font'] = dict(size=12)  # Set font size for titles
+
+    # Colors for the targets
+    national_target_color = "red"
+    #end_tb_target_color = "red"
+
+    show_legend_for_target = True  # To ensure the legend is shown only once
+
+    for scenario_idx, (scenario_key, quantile_outputs) in enumerate(
+        scenario_outputs.items()
+    ):
+        row = scenario_idx + 1
+
+        # Get the formatted scenario name from the manual list
+        display_name = y_axis_titles[scenario_idx]
+
+        for j, indicator_name in enumerate(indicators):
+            col = j + 1
+            color = indicator_colors[indicator_name]
+            data = quantile_outputs[
+                indicator_name
+            ]  # Access the correct indicator data for the scenario
+
+            # Ensure the index is of float type and filter data by date range
+            filtered_data = data[
+                (data.index >= plot_start_date) & (data.index <= plot_end_date)
+            ]
+
+            for quant in quantiles:
+                if quant not in filtered_data.columns:
+                    continue
+
+                alpha = (
+                    min(
+                        (
+                            quantiles.index(quant),
+                            len(quantiles) - quantiles.index(quant),
+                        )
+                    )
+                    / (len(quantiles) / 2)
+                    * max_alpha
+                )
+                fill_color = f"rgba({hex_to_rgb(color)[0]}, {hex_to_rgb(color)[1]}, {hex_to_rgb(color)[2]}, {alpha})"  # Ensure correct alpha blending
+
+                fig.add_trace(
+                    go.Scatter(
+                        x=filtered_data.index,
+                        y=filtered_data[quant],
+                        fill="tonexty",
+                        fillcolor=fill_color,
+                        mode="lines",
+                        line={"width": 0},
+                        showlegend=False,
+                    ),
+                    row=row,
+                    col=col,
+                )
+
+            # Plot the median line (0.5 quantile)
+            if 0.5 in filtered_data.columns:
+                fig.add_trace(
+                    go.Scatter(
+                        x=filtered_data.index,
+                        y=filtered_data[0.5],
+                        line={"color": color},
+                        showlegend=False,
+                    ),
+                    row=row,
+                    col=col,
+                )
+
+            # Add specific points for "incidence" and "mortality" at 2030 national TB elimination target
+            if indicator_name == "incidence":
+                # 2030 National Target (Purple) - Legend rank 1
+                fig.add_trace(
+                    go.Scatter(
+                        x=[2030.0],
+                        y=[65],  # 2030 national target for incidence
+                        mode="markers",
+                        marker=dict(size=4, color=national_target_color),
+                        name="2030 TB Elimination Target",
+                        showlegend=show_legend_for_target,
+                        legendgroup="Targets",  # Group both targets together
+                        legendrank=2,  # Set legend rank to ensure it appears first
+                    ),
+                    row=row,
+                    col=col,
+                )
+
+                show_legend_for_target = False  # Only show legend once
+
+            if indicator_name == "mortality":
+                # 2030 national Target (Purple) - no legend this time, but keep the same group
+                fig.add_trace(
+                    go.Scatter(
+                        x=[2030.0],
+                        y=[6],  # 2030 SDG target for deaths
+                        mode="markers",
+                        marker=dict(size=4, color=national_target_color),
+                        showlegend=False,
+                        legendgroup="Targets",
+                    ),
+                    row=row,
+                    col=col,
+                )
+
+            fig.update_yaxes(
+                title_text=f"<b>{display_name}</b>",
+                title_font=dict(size=10),
+                row=row,
+                col=1,
+            )
+
+            # Only show x-ticks for the last row
+            if row < n_scenarios:
+                fig.update_xaxes(showticklabels=False, row=row, col=col)
+
+    fig.update_layout(
+        height=680,  # Adjust height based on the number of scenarios
+        title="",
+        xaxis_title="",
+        showlegend=True,
+        legend=dict(
+            title="",
+            orientation="v",  # Vertical orientation for legend
+            yanchor="top",
+            y= -0.05,  # Position at the top of the last plot
+            xanchor="left",
+            x= 0.01,  # Position to the left
+            font=dict(size=12),
+            tracegroupgap=0,  # Remove any gap between traces
+            itemwidth=30,  # Ensure enough space for both target legends to fit
+            #bordercolor="black",  # Set the border color (e.g., black)
+            borderwidth=0,  # Set the border width
+        ),
+        margin=dict(l=20, r=5, t=30, b=40),  # Adjust margins to accommodate titles
+    )
+
+    # Update x-axis ticks to increase by 1 year
+    fig.update_xaxes(
+        tickmode="linear",
+        tick0=plot_start_date,
+        dtick=2,  # Set tick increment to 1 year
+    )
+
+    return fig
+
+def hex_to_rgb(hex_color):
+    """
+    Convert hex color (e.g., '#636EFA') to an rgb color tuple (e.g., (99, 110, 250)).
+    """
+    hex_color = hex_color.lstrip("#")
+    return tuple(int(hex_color[i : i + 2], 16) for i in (0, 2, 4))    
 
 def plot_tracked_outputs(
         outs: pd.DataFrame, 

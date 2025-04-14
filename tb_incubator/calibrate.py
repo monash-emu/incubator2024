@@ -13,6 +13,7 @@ from tb_incubator.constants import indicator_names, quantiles
 
 from estival import targets as est
 from estival import priors as esp
+from estival.sampling import tools as esamp
 from estival.model import BayesianCompartmentalModel
 
 import arviz as az
@@ -22,7 +23,9 @@ from arviz.labels import MapLabeller
 def get_bcm(
     params: Dict[str, any],
     xpert_sensitivity: bool = True,
-    covid_effects: bool = True
+    covid_effects: Dict[str, bool] = None,
+    xpert_util_target: float = None,
+    improved_detection_multiplier: float = None,
 ) -> BayesianCompartmentalModel:
     """
     Constructs and returns a Bayesian Compartmental Model.
@@ -35,7 +38,17 @@ def get_bcm(
       and fixed parameters, prior distributions for Bayesian inference, and target data for model
       validation or calibration.
     """
-    model, desc = build_model(params, xpert_sensitivity=xpert_sensitivity, covid_effects=covid_effects)
+    if covid_effects is None:
+        covid_effects = {
+            "detection_reduction": False,
+            "post_covid_improvement": False
+        }
+
+    model, desc = build_model(params, 
+                              xpert_sensitivity=xpert_sensitivity, 
+                              covid_effects=covid_effects,
+                              xpert_util_target= xpert_util_target,
+                              improved_detection_multiplier= improved_detection_multiplier)
     priors = get_all_priors()
     targets = get_targets()
     
@@ -49,28 +62,32 @@ def get_all_priors() -> List:
         All the priors used under any analyses
     """
     priors = [
-        esp.UniformPrior("contact_rate", (0.1, 300.0)),
+        esp.UniformPrior("contact_rate", (0.1, 70.0)),
         #esp.UniformPrior("progression_multiplier", (1.0,  2.0)),
-        #esp.BetaPrior.from_mean_and_ci("rr_infection_latent", 0.24, (0.18, 0.30)),
-        #esp.BetaPrior.from_mean_and_ci("rr_infection_recovered", 0.595, (0.2, 0.99)),
+        #esp.UniformPrior("rr_infection_latent", (0.1, 0.50)),
+        #esp.UniformPrior("rr_infection_recovered", (0.2, 1.0)),
+        esp.BetaPrior.from_mean_and_ci("rr_infection_latent", 0.20, (0.10, 0.30)),
+        esp.BetaPrior.from_mean_and_ci("rr_infection_recovered", 0.50, (0.20, 0.99)),
         #esp.TruncNormalPrior("self_recovery_rate", 0.350, 0.028, (0.200, 0.500)),
-        esp.UniformPrior("screening_scaleup_shape", (0.01, 0.30)),
-        esp.UniformPrior("screening_inflection_time", (1990, 2018)),
-        esp.UniformPrior("time_to_screening_end_asymp", (0.4, 3.0)),
+        esp.UniformPrior("screening_scaleup_shape", (0.03, 0.40)),
+        esp.UniformPrior("screening_inflection_time", (1990, 2022)),
+        esp.UniformPrior("time_to_screening_end_asymp", (0.5, 3.0)),
         #esp.UniformPrior("seed_time", (1800.0, 1850.0)),  
         #esp.UniformPrior("seed_duration", (1.0, 20.0)),
         #esp.UniformPrior("seed_rate", (1.0, 100.0)), 
-        esp.UniformPrior("base_sensitivity", (0.1, 1.0)),
+        esp.UniformPrior("base_sensitivity", (0.1, 0.8)),
         esp.BetaPrior.from_mean_and_ci("genexpert_sensitivity", 0.9, (0.80, 0.99)),
-        esp.UniformPrior("detection_reduction", (0.2, 0.9)),
-        esp.UniformPrior("post_covid_improvement", (1.0, 3.0)),
+        esp.UniformPrior("detection_reduction", (0.1, 0.9)),
+        #esp.UniformPrior("contact_reduction", (0.1, 0.9)),
+        esp.UniformPrior("post_covid_improvement", (1.0, 6.0)),
         #esp.UniformPrior("sustained_improvement", (1.0, 3.0)),
-        #esp.BetaPrior.from_mean_and_ci("incidence_props_smear_positive_among_pulmonary", 0.8, (0.6, 0.99)),
-        #esp.BetaPrior.from_mean_and_ci("incidence_props_pulmonary", 0.9, (0.7, 0.95)),
-        esp.TruncNormalPrior("smear_positive_death_rate", 0.40, 0.028, (0.30, 0.50)),
-        esp.TruncNormalPrior("smear_negative_death_rate", 0.03, 0.0046, (0.01, 0.05)),
-        esp.TruncNormalPrior("smear_positive_self_recovery", 0.248, 0.02, (0.1, 0.5)),
-        esp.TruncNormalPrior("smear_negative_self_recovery", 0.130, 0.02, (0.05, 0.209)),
+        #esp.UniformPrior("incidence_props_smear_positive_among_pulmonary", (0.4, 0.90)),
+        esp.BetaPrior.from_mean_and_ci("incidence_props_smear_positive_among_pulmonary", 0.65, (0.4, 0.90)),
+        esp.BetaPrior.from_mean_and_ci("incidence_props_pulmonary", 0.9, (0.7, 0.95)),
+        esp.TruncNormalPrior("smear_positive_death_rate", 0.392, 0.028, (0.335, 0.449)),
+        esp.TruncNormalPrior("smear_negative_death_rate", 0.026, 0.0046, (0.017, 0.035)),
+        esp.TruncNormalPrior("smear_positive_self_recovery", 0.232, 0.02, (0.177, 0.288)),
+        esp.TruncNormalPrior("smear_negative_self_recovery", 0.139, 0.02, (0.07, 0.209)),
     ]
 
     return priors
@@ -533,4 +550,198 @@ def plot_output_ranges(
     )
 
     return fig
+
+
+def calculate_xpert_scenario_outputs(
+    params: Dict[str, float],
+    idata_extract: az.InferenceData,
+    indicators: List[str] = ['incidence', 'prevalence', 'notification', 'mortality'],
+    xpert_target_list: List[float] = [0.90, 0.80, 0.70],
+    covid_effects: Dict[str, bool] = None,
+) -> Dict[str, Dict[str, pd.DataFrame]]:
+    """
+    Calculate the model results for each scenario with different percentage of genexpert utilisation
+    and return the baseline and scenario outputs.
+
+    Args:
+        params: Dictionary containing model parameters.
+        idata_extract: InferenceData object containing the model data.
+        indicators: List of indicators to return for the other scenarios (default: ['incidence', 'mortality_raw']).
+        xpert_target_list:  List of utilisation target for improved detection to loop through (default: [0.90, 0.80, 0.70]).
+
+    Returns:
+        A dictionary containing results for the baseline and each scenario.
+    """
+    if covid_effects is None:
+        covid_effects = {
+            "detection_reduction": False,
+            "post_covid_improvement": False
+        }
+
+    # Base scenario (calculate outputs for all indicators)
+    bcm = get_bcm(params, xpert_sensitivity=True, covid_effects=covid_effects)
+    base_results = esamp.model_results_for_samples(idata_extract, bcm).results
+    base_quantiles = esamp.quantiles_for_results(base_results, quantiles)
+
+    # Store results for the baseline scenario
+    scenario_outputs = {"base_scenario": base_quantiles}
+
+    # Calculate quantiles for each improvement in xpert utilisation scenario
+    for xpert_target in xpert_target_list:
+        bcm = get_bcm(params, xpert_sensitivity=True, covid_effects=covid_effects, xpert_util_target=xpert_target)
+        scenario_result = esamp.model_results_for_samples(idata_extract, bcm).results
+        scenario_quantiles = esamp.quantiles_for_results(scenario_result, quantiles)
+
+        # Store the results for this scenario
+        scenario_key = f"increase_xpert_util_target_by_{xpert_target}".replace(".", "_")
+        scenario_outputs[scenario_key] = scenario_quantiles
+
+    # Extract only the relevant indicators for each scenario
+    for scenario_key in scenario_outputs:
+        if scenario_key != "base_scenario":
+            scenario_outputs[scenario_key] = scenario_outputs[scenario_key][indicators]
+
+    return scenario_outputs
+
+
+def calculate_detection_scenario_outputs(
+    params: Dict[str, float],
+    idata_extract: az.InferenceData,
+    indicators: List[str] = ['incidence', 'prevalence', 'notification', 'mortality'],
+    detection_multiplier_list: List[float] = [2.0, 5.0, 10.0],
+    covid_effects: Dict[str, bool] = None,
+) -> Dict[str, Dict[str, pd.DataFrame]]:
+    """
+    Calculate the model results for each scenario with different detection multipliers
+    and return the baseline and scenario outputs.
+
+    Args:
+        params: Dictionary containing model parameters.
+        idata_extract: InferenceData object containing the model data.
+        indicators: List of indicators to return for the other scenarios (default: ['incidence', 'mortality_raw']).
+        detection_multipliers: List of multipliers for improved detection to loop through (default: [2.0, 5.0, 12.0]).
+
+    Returns:
+        A dictionary containing results for the baseline and each scenario.
+    """
+    if covid_effects is None:
+        covid_effects = {
+            "detection_reduction": False,
+            "post_covid_improvement": False
+        }
+
+    # Base scenario (calculate outputs for all indicators)
+    bcm = get_bcm(params, xpert_sensitivity=True, covid_effects=covid_effects)
+    base_results = esamp.model_results_for_samples(idata_extract, bcm).results
+    base_quantiles = esamp.quantiles_for_results(base_results, quantiles)
+
+    # Store results for the baseline scenario
+    scenario_outputs = {"base_scenario": base_quantiles}
+
+    # Calculate quantiles for each improvement in detection scenario
+    for multiplier in detection_multiplier_list:
+        bcm = get_bcm(params, xpert_sensitivity=True, covid_effects=covid_effects, improved_detection_multiplier=multiplier)
+        scenario_result = esamp.model_results_for_samples(idata_extract, bcm).results
+        scenario_quantiles = esamp.quantiles_for_results(scenario_result, quantiles)
+
+        # Store the results for this scenario
+        scenario_key = f"increase_case_detection_by_{multiplier}".replace(".", "_")
+        scenario_outputs[scenario_key] = scenario_quantiles
+
+    # Extract only the relevant indicators for each scenario
+    for scenario_key in scenario_outputs:
+        if scenario_key != "base_scenario":
+            scenario_outputs[scenario_key] = scenario_outputs[scenario_key][indicators]
+
+    return scenario_outputs
+
+def calculate_outputs_for_covid(
+    params: Dict[str, float],
+    idata_extract: az.InferenceData,
+    indicators: List[str] = None,  # Optional list of indicators to include
+) -> Dict[str, Dict[str, pd.DataFrame]]:
+    """
+    Calculate model outputs for each scenario defined in covid_configs and store the results
+    in a dictionary where the keys correspond to the keys in covid_configs.
+
+    Args:
+        params: Dictionary containing model parameters.
+        idata_extract: InferenceData object containing the model data.
+        indicators: List of indicators to calculate outputs for. If None, all available indicators are included.
+
+    Returns:
+        A dictionary where each key corresponds to a scenario in covid_configs and the value is 
+        another dictionary containing DataFrames with outputs for the given indicators.
+    """
+
+    # Define the covid_configs inside the function - starting with working scenarios first
+    covid_configs = {
+        'no_covid': {
+            "detection_reduction": False,
+            "post_covid_improvement": False
+        },  # No COVID effects at all
+
+        'case_detection_reduction_only': {
+            "detection_reduction": True,
+            "post_covid_improvement": False
+        },  # With detection, but no post-COVID improvement
+        
+        'case_detection_improvement_only': {
+            "detection_reduction": False,
+            "post_covid_improvement": True
+        },  # Detection improvement (without detection reduction)
+
+        'case_detection_reduction_followed_by_improvement': {
+            "detection_reduction": True,
+            "post_covid_improvement": True
+        },  # Detection reduction followed by improvement
+        
+    }
+
+    scenario_outputs = {}
+
+    # Loop through each scenario in covid_configs
+    for scenario_name, covid_effects in covid_configs.items():
+        try:
+            print(f"Processing scenario: {scenario_name}")
+            print(f"COVID effects: {covid_effects}")
+            
+            # Run the model for the current scenario
+            bcm = get_bcm(params, covid_effects=covid_effects)
+            model_results = esamp.model_results_for_samples(idata_extract, bcm)
+            spaghetti_res = model_results.results
+            ll_res = model_results.extras  # Extract additional results (e.g., log-likelihoods)
+            scenario_quantiles = esamp.quantiles_for_results(spaghetti_res, quantiles)
+
+            # Initialize a dictionary to store indicator-specific outputs
+            indicator_outputs = {}
+
+            # If indicators parameter is None, include all available indicators
+            if indicators is None:
+                indicator_outputs = scenario_quantiles
+            else:
+                # Otherwise, include only the specified indicators
+                for indicator in indicators:
+                    if indicator in scenario_quantiles:
+                        indicator_outputs[indicator] = scenario_quantiles[indicator]
+                    else:
+                        print(f"Warning: Indicator '{indicator}' not found in model results for scenario '{scenario_name}'")
+
+            # Store the outputs and ll_res in the dictionary with the scenario name as the key
+            scenario_outputs[scenario_name] = {
+                "indicator_outputs": indicator_outputs,
+                "ll_res": ll_res
+            }
+            
+            print(f"Successfully processed scenario: {scenario_name}")
+            
+        except Exception as e:
+            print(f"Error processing scenario '{scenario_name}': {str(e)}")
+            import traceback
+            traceback.print_exc()
+            
+            # Continue with the next scenario instead of failing completely
+            continue
+
+    return scenario_outputs
 

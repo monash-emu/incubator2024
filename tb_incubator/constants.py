@@ -29,16 +29,57 @@ indicator_names = {
     "comp_size_recovered": "Recovered",
     "total_population": "Total population",
     "notification": "TB notifications",
-    "incidence": "TB incidence (per 100,000)",
+    "incidence": "TB incidence (per 100,000/year)",
     "percentage_latent": "Percentage of latent TB infection (%)",
-    "prevalence": "TB prevalence (per 100,000)",
+    "prevalence": "TB prevalence (per 100,000/year)",
     "case_detection_rate": "Case detection rate",
     "case_notification_rate": "Case notification rate",
-    "mortality": "TB deaths (per 100,000)",
+    "mortality": "TB deaths (per 100,000/year)",
     "detection_rate": "Detection rate",
 }
 
 quantiles = [0.025, 0.25, 0.5, 0.75, 0.975]
+
+scenario_names = {
+	'base_scenario': 'Baseline scenario',
+	'increase_xpert_util_target_by_0_9': 'GeneXpert Utilisation: 90%',
+    'increase_xpert_util_target_by_0_8': 'GeneXpert Utilisation: 80%',
+    'increase_xpert_util_target_by_0_7': 'GeneXpert Utilisation: 70%',
+    'increase_case_detection_by_2_0': 'Detection rate doubled (2×)',
+    'increase_case_detection_by_5_0': 'Detection rate five-fold (5×)',
+    'increase_case_detection_by_10_0': 'Detection rate ten-fold (10×)',
+    'no_covid': 'Counterfactual: No COVID-19',
+    'case_detection_reduction_only': 'COVID-19: Case detection reduction only',
+    'case_detection_improvement_only': 'COVID-19: Case detection improvement only',
+    'case_detection_reduction_followed_by_improvement': 'Case detection reduction and improvement'
+}
+
+detection_scenario_names = {
+
+}
+
+covid_configs = {
+    'no_covid': {
+        "detection_reduction": False,
+        "post_covid_improvement": False
+    },  # No COVID effects at all
+    
+    'case_detection_reduction_only': {
+        "detection_reduction": True,
+        "post_covid_improvement": False
+    },  # With detection, but no post-COVID improvement
+    
+    'case_detection_improvement_only': {
+        "detection_reduction": False,
+        "post_covid_improvement": True
+    },  # Detection improvement (without detection reduction)
+
+
+    'case_detection_reduction_followed_by_improvement': {
+        "detection_reduction": True,
+        "post_covid_improvement": True
+    },  # Detection reduction followed by improvement
+}
 
 
 def set_project_base_path(path: Path):
@@ -57,8 +98,9 @@ def get_project_paths():
         "PROJECT_PATH": _PROJECT_PATH,
         "DATA_PATH": _PROJECT_PATH / "data",
         "LOCAL_DATA_PATH": _PROJECT_PATH / "data" / "local_data",
-        "IMAGE_PATH": _PROJECT_PATH / "supplementary",
+        "IMAGE_PATH": _PROJECT_PATH / "imgs",
         "OUT_PATH": _PROJECT_PATH / "runs",
+        "OUTPUTS": _PROJECT_PATH / "outputs"
     }
 
 

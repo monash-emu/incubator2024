@@ -1,13 +1,13 @@
 from typing import Dict
 from summer2 import CompartmentalModel
 from summer2.parameters import Parameter, Time, Function
-from summer2.functions.time import get_sigmoidal_interpolation_function, get_linear_interpolation_function
 from .input import get_population_entry_rate, load_param_info
 import tb_incubator.constants as const
 from .utils import tanh_based_scaleup, triangle_wave_func
 from .outputs import request_model_outputs
 from .strat_age import get_age_strat
 from .strat_organ import get_organ_strat
+from summer2.functions.time import get_linear_interpolation_function
 
 compartments = const.compartments
 infectious_compartments = const.infectious_compartments
@@ -22,7 +22,9 @@ fixed_params = param_info["value"]
 def build_model(
     params: Dict[str, any],
     xpert_sensitivity: bool = True,
-    covid_effects: bool = True,
+    covid_effects: Dict[str, bool] = None,
+    xpert_util_target: float = None,
+    improved_detection_multiplier: float = None
 ) -> CompartmentalModel:
     """
     Builds and returns a compartmental model for epidemiological studies, incorporating
@@ -35,6 +37,12 @@ def build_model(
     Returns:
         A configured CompartmentalModel object.
     """
+    if covid_effects is None:
+        covid_effects = {
+            "detection_reduction": False,
+            "post_covid_improvement": False
+        }
+    
     desc  = []
 
     model = CompartmentalModel(
@@ -124,6 +132,8 @@ def build_model(
         fixed_params,
         xpert_sensitivity=xpert_sensitivity,
         covid_effects=covid_effects,
+        xpert_util_target= xpert_util_target,
+        improved_detection_multiplier= improved_detection_multiplier
     )
     model.stratify_with(organ_strat)
     model.request_track_modelled_value("base_detection", base_detection)
@@ -164,20 +174,26 @@ def add_latency_flow(model):
     for flow, source, dest in latency_flows:
         model.add_transition_flow(flow, 1.0, source, dest)
 
-# Add infection flow
 def add_infection_flow(model):
+    """
+    Adds infection flows from various compartments to early latent TB.
+    
+    Args:
+        model: The compartmental model
+        covid_effects: Dictionary with COVID effect settings
+    """        
     infection_flows = [
         ["susceptible", None],
         ["late_latent", "rr_infection_latent"],
         ["recovered", "rr_infection_recovered"],
     ]
-
-    contact_rate = Parameter("contact_rate") #* (
-        #get_linear_interpolation_function(
-            #[2019.0, 2020.0, 2022], [1.0, 1 - Parameter("contact_reduction"), 1.0]
-        #)
-    #)
-
+    
+    contact_rate = Parameter("contact_rate")
+    #if covid_effects["contact_reduction"]:
+    #    contact_rate *= get_linear_interpolation_function(
+    #        [2019.0, 2020.0, 2022.0], [1.0, 1.0 - Parameter("contact_reduction"), 1.0]
+    #    )
+        
     for origin, modifier in infection_flows:
         modifier = Parameter(modifier) if modifier else 1.0
         rate = contact_rate * modifier
