@@ -22,7 +22,7 @@ from arviz.labels import MapLabeller
 
 def get_bcm(
     params: Dict[str, any],
-    xpert_sensitivity: bool = True,
+    xpert_improvement: bool = True,
     covid_effects: Dict[str, bool] = None,
     xpert_util_target: float = None,
     improved_detection_multiplier: float = None,
@@ -41,54 +41,59 @@ def get_bcm(
     if covid_effects is None:
         covid_effects = {
             "detection_reduction": False,
-            "post_covid_improvement": False
+            #"post_covid_improvement": False
         }
 
     model, desc = build_model(params, 
-                              xpert_sensitivity=xpert_sensitivity, 
+                              xpert_improvement=xpert_improvement, 
                               covid_effects=covid_effects,
                               xpert_util_target= xpert_util_target,
                               improved_detection_multiplier= improved_detection_multiplier)
-    priors = get_all_priors()
+    priors = get_all_priors(xpert_improvement=xpert_improvement, covid_effects=covid_effects)
     targets = get_targets()
     
     return BayesianCompartmentalModel(model, params, priors, targets)
 
 
-def get_all_priors() -> List:
+def get_all_priors(xpert_improvement = True, covid_effects: Dict[str, bool] = None) -> List:
     """Get all priors used in any of the analysis types.
 
     Returns:
         All the priors used under any analyses
     """
     priors = [
-        esp.UniformPrior("contact_rate", (0.1, 70.0)),
+        esp.UniformPrior("contact_rate", (0.1, 100.0)),
         #esp.UniformPrior("progression_multiplier", (1.0,  2.0)),
         #esp.UniformPrior("rr_infection_latent", (0.1, 0.50)),
         #esp.UniformPrior("rr_infection_recovered", (0.2, 1.0)),
         esp.BetaPrior.from_mean_and_ci("rr_infection_latent", 0.20, (0.10, 0.30)),
         esp.BetaPrior.from_mean_and_ci("rr_infection_recovered", 0.50, (0.20, 0.99)),
         #esp.TruncNormalPrior("self_recovery_rate", 0.350, 0.028, (0.200, 0.500)),
-        esp.UniformPrior("screening_scaleup_shape", (0.03, 0.40)),
-        esp.UniformPrior("screening_inflection_time", (1990, 2022)),
-        esp.UniformPrior("time_to_screening_end_asymp", (0.5, 3.0)),
+        esp.UniformPrior("screening_scaleup_shape", (0.03, 0.07)),
+        esp.UniformPrior("screening_inflection_time", (2000.0, 2010.0)),
+        esp.UniformPrior("time_to_screening_end_asymp", (0.40, 0.50)),
+        esp.UniformPrior("notif_start_time", (1970.0, 1990.0)),
         #esp.UniformPrior("seed_time", (1800.0, 1850.0)),  
         #esp.UniformPrior("seed_duration", (1.0, 20.0)),
         #esp.UniformPrior("seed_rate", (1.0, 100.0)), 
-        esp.UniformPrior("base_sensitivity", (0.1, 0.8)),
-        esp.BetaPrior.from_mean_and_ci("genexpert_sensitivity", 0.9, (0.80, 0.99)),
-        esp.UniformPrior("detection_reduction", (0.1, 0.9)),
+        esp.UniformPrior("base_diagnostic_capacity", (0.1, 0.8)),
+        esp.UniformPrior("initial_notif_rate", (0.1, 0.90)),
+        esp.UniformPrior("latest_notif_rate", (0.4, 0.90)),
         #esp.UniformPrior("contact_reduction", (0.1, 0.9)),
-        esp.UniformPrior("post_covid_improvement", (1.0, 6.0)),
+        #esp.UniformPrior("post_covid_improvement", (1.0, 6.0)),
         #esp.UniformPrior("sustained_improvement", (1.0, 3.0)),
         #esp.UniformPrior("incidence_props_smear_positive_among_pulmonary", (0.4, 0.90)),
         esp.BetaPrior.from_mean_and_ci("incidence_props_smear_positive_among_pulmonary", 0.65, (0.4, 0.90)),
-        esp.BetaPrior.from_mean_and_ci("incidence_props_pulmonary", 0.9, (0.7, 0.95)),
+        #esp.BetaPrior.from_mean_and_ci("incidence_props_pulmonary", 0.9, (0.7, 0.95)),
         esp.TruncNormalPrior("smear_positive_death_rate", 0.392, 0.028, (0.335, 0.449)),
         esp.TruncNormalPrior("smear_negative_death_rate", 0.026, 0.0046, (0.017, 0.035)),
         esp.TruncNormalPrior("smear_positive_self_recovery", 0.232, 0.02, (0.177, 0.288)),
         esp.TruncNormalPrior("smear_negative_self_recovery", 0.139, 0.02, (0.07, 0.209)),
     ]
+    if xpert_improvement:
+        priors.append(esp.BetaPrior.from_mean_and_ci("genexpert_sensitivity", 0.9, (0.80, 0.99)))
+    if covid_effects["detection_reduction"]:
+        priors.append(esp.UniformPrior("detection_reduction", (0.1, 0.9)))
 
     return priors
 
@@ -116,7 +121,7 @@ def get_targets() -> list:
     return targets
 
 
-def save_priors(file_suffix, calib_out, force_new=False, verbose=True):
+def save_priors(file_suffix, calib_out, force_new=False, verbose=True, xpert_improvement = True, covid_effects: Dict[str, bool] = None):
     """
     Save table of priors used in current run 
     
@@ -137,7 +142,7 @@ def save_priors(file_suffix, calib_out, force_new=False, verbose=True):
                 print(f"{'Creating new' if force_new else 'Generating'} prior table...")
             
             idata = az.from_netcdf(calib_out / f'calib_full_out_{file_suffix}.nc')
-            all_priors = get_all_priors()
+            all_priors = get_all_priors(xpert_improvement=xpert_improvement, covid_effects=covid_effects)
             param_info = load_param_info()
             df = tabulate_priors(all_priors, param_info)
             df.to_csv(prior_file)
@@ -296,6 +301,8 @@ def tabulate_calib_results(
 def plot_posterior_comparison(
     idata: az.InferenceData,
     span: float,
+    xpert_improvement: bool = True,
+    covid_effects: Dict[str, bool] = None,
 ) -> plt.Figure:
     """Area plot posteriors against prior distributions.
 
@@ -314,7 +321,7 @@ def plot_posterior_comparison(
     axis_fontsize = 18
     tick_fontsize = 16
 
-    priors = get_all_priors()
+    priors = get_all_priors(xpert_improvement=xpert_improvement, covid_effects=covid_effects)
     prior_names = [p.name for p in priors]
     params_desc = load_param_info()["descriptions"]
     params_units = load_param_info()["unit"]
@@ -579,7 +586,7 @@ def calculate_xpert_scenario_outputs(
         }
 
     # Base scenario (calculate outputs for all indicators)
-    bcm = get_bcm(params, xpert_sensitivity=True, covid_effects=covid_effects)
+    bcm = get_bcm(params, xpert_improvement=True, covid_effects=covid_effects)
     base_results = esamp.model_results_for_samples(idata_extract, bcm).results
     base_quantiles = esamp.quantiles_for_results(base_results, quantiles)
 
@@ -588,7 +595,7 @@ def calculate_xpert_scenario_outputs(
 
     # Calculate quantiles for each improvement in xpert utilisation scenario
     for xpert_target in xpert_target_list:
-        bcm = get_bcm(params, xpert_sensitivity=True, covid_effects=covid_effects, xpert_util_target=xpert_target)
+        bcm = get_bcm(params, xpert_improvement=True, covid_effects=covid_effects, xpert_util_target=xpert_target)
         scenario_result = esamp.model_results_for_samples(idata_extract, bcm).results
         scenario_quantiles = esamp.quantiles_for_results(scenario_result, quantiles)
 
@@ -631,7 +638,7 @@ def calculate_detection_scenario_outputs(
         }
 
     # Base scenario (calculate outputs for all indicators)
-    bcm = get_bcm(params, xpert_sensitivity=True, covid_effects=covid_effects)
+    bcm = get_bcm(params, xpert_improvement=True, covid_effects=covid_effects)
     base_results = esamp.model_results_for_samples(idata_extract, bcm).results
     base_quantiles = esamp.quantiles_for_results(base_results, quantiles)
 
@@ -640,7 +647,7 @@ def calculate_detection_scenario_outputs(
 
     # Calculate quantiles for each improvement in detection scenario
     for multiplier in detection_multiplier_list:
-        bcm = get_bcm(params, xpert_sensitivity=True, covid_effects=covid_effects, improved_detection_multiplier=multiplier)
+        bcm = get_bcm(params, xpert_improvement=True, covid_effects=covid_effects, improved_detection_multiplier=multiplier)
         scenario_result = esamp.model_results_for_samples(idata_extract, bcm).results
         scenario_quantiles = esamp.quantiles_for_results(scenario_result, quantiles)
 
@@ -678,24 +685,10 @@ def calculate_outputs_for_covid(
     covid_configs = {
         'no_covid': {
             "detection_reduction": False,
-            "post_covid_improvement": False
         },  # No COVID effects at all
-
         'case_detection_reduction_only': {
             "detection_reduction": True,
-            "post_covid_improvement": False
-        },  # With detection, but no post-COVID improvement
-        
-        'case_detection_improvement_only': {
-            "detection_reduction": False,
-            "post_covid_improvement": True
-        },  # Detection improvement (without detection reduction)
-
-        'case_detection_reduction_followed_by_improvement': {
-            "detection_reduction": True,
-            "post_covid_improvement": True
-        },  # Detection reduction followed by improvement
-        
+        }  # With detection reduction
     }
 
     scenario_outputs = {}

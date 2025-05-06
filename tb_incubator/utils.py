@@ -2,6 +2,7 @@ from jax import numpy as jnp
 from math import log, exp
 import numpy as np
 import pandas as pd
+from summer2.functions.time import get_linear_interpolation_function
 
 def get_param_table(param_info, prior_names=None):
     """

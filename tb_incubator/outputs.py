@@ -1,8 +1,10 @@
 from summer2 import CompartmentalModel
 from typing import List
-from summer2.parameters import DerivedOutput
+from summer2.parameters import DerivedOutput, Time, Function
 import tb_incubator.constants as const
 import numpy as np
+from summer2.functions.time import get_linear_interpolation_function
+from summer2.parameters import Parameter
 
 compartments = const.compartments
 infectious_compartments = const.infectious_compartments
@@ -63,7 +65,18 @@ def request_model_outputs(
     model.request_function_output("incidence", 1e5 * inc_raw / tot_pop)
 
     # notification
-    notifs = model.request_output_for_flow("notification", "detection")
+    # Get the treatment flow
+    model.request_output_for_flow("treatment_commencement", "treatment_commencement")
+    
+    prop_reported_case = get_linear_interpolation_function(
+        [1985, 2017.0, 2023.0], [0.01, Parameter("initial_notif_rate"), Parameter("latest_notif_rate")]
+    )
+
+    tracked_prop_reported_case = model.request_track_modelled_value("notif_ratio", prop_reported_case)
+
+    notifs = model.request_function_output("notification", DerivedOutput("treatment_commencement") * tracked_prop_reported_case)
+    #notifs = model.request_output_for_flow("notification", "treatment_commencement")
+
     model.request_function_output("notification_log", np.log(notifs))
 
     # notification per incidence:

@@ -48,37 +48,18 @@ scenario_names = {
     'increase_case_detection_by_2_0': 'Detection rate doubled (2×)',
     'increase_case_detection_by_5_0': 'Detection rate five-fold (5×)',
     'increase_case_detection_by_10_0': 'Detection rate ten-fold (10×)',
-    'no_covid': 'Counterfactual: No COVID-19',
-    'case_detection_reduction_only': 'COVID-19: Case detection reduction only',
-    'case_detection_improvement_only': 'COVID-19: Case detection improvement only',
-    'case_detection_reduction_followed_by_improvement': 'Case detection reduction and improvement'
-}
-
-detection_scenario_names = {
-
+    #'no_covid': 'Counterfactual: No COVID-19',
+    #'case_detection_reduction': 'COVID-19: Case detection reduction'
 }
 
 covid_configs = {
     'no_covid': {
-        "detection_reduction": False,
-        "post_covid_improvement": False
+        "detection_reduction": False
     },  # No COVID effects at all
     
     'case_detection_reduction_only': {
-        "detection_reduction": True,
-        "post_covid_improvement": False
-    },  # With detection, but no post-COVID improvement
-    
-    'case_detection_improvement_only': {
-        "detection_reduction": False,
-        "post_covid_improvement": True
-    },  # Detection improvement (without detection reduction)
-
-
-    'case_detection_reduction_followed_by_improvement': {
-        "detection_reduction": True,
-        "post_covid_improvement": True
-    },  # Detection reduction followed by improvement
+        "detection_reduction": True
+    },  # With detection reduction
 }
 
 

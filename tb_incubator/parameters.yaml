@@ -15,7 +15,7 @@ descriptions:
   screening_scaleup_shape: "Passive screening shape"
   screening_inflection_time: "Passive screening inflection time"
   time_to_screening_end_asymp: "Time from active TB to be screened"
-  base_sensitivity: "Preceding diagnostic algorithm sensitivity"
+  base_diagnostic_capacity: "Preceding diagnostic algorithm capacity"
   genexpert_sensitivity: "GeneXpert sensitivity"
   detection_reduction: "Detection reduction"
   post_covid_improvement: "Initial surge in detection post-COVID19"
@@ -32,6 +32,9 @@ descriptions:
   smear_negative_death_rate: "Death rate for smear-negative and extrapulmonary TB"
   smear_positive_self_recovery: "Self-recovery rate for smear-positive TB"
   smear_negative_self_recovery: "Self-recovery rate for smear-negative and extrapulmonary TB"
+  initial_notif_rate: "Initial proportion of TB patients that started treatment that are reported in official surveillance data"
+  latest_notif_rate: "Latest proportion of TB patients that started treatment that are reported in official surveillance data"
+  notif_start_time: "Timepoint when case detection begins to increasee"
 value:
   start_population_size: 1.0
   age_infectiousness_switch: 15.0
@@ -61,10 +64,10 @@ value:
   seed_time: 1805.0
   seed_duration: 10.0
   seed_rate: 70.0
-  screening_scaleup_shape: 0.167
-  screening_inflection_time: 1993.929
+  screening_scaleup_shape: 0.10
+  screening_inflection_time: 2002.0
   time_to_screening_end_asymp: 1.598
-  base_sensitivity: 0.296
+  base_diagnostic_capacity: 0.296
   genexpert_sensitivity: 0.912
   detection_reduction: 0.450
   post_covid_improvement: 1.910
@@ -72,7 +75,7 @@ value:
   smear_positive_infect_multiplier: 1.0
   smear_negative_infect_multiplier: 0.25
   extrapulmonary_infect_multiplier: 0.
-  incidence_props_pulmonary: 0.96
+  incidence_props_pulmonary: 0.95
   incidence_props_smear_positive_among_pulmonary: 0.85
   passive_screening_sensitivity_extrapulmonary: 0.5
   passive_screening_sensitivity_smear_negative: 0.7
@@ -81,6 +84,9 @@ value:
   smear_negative_death_rate: 0.032
   smear_positive_self_recovery: 0.257
   smear_negative_self_recovery: 0.130
+  initial_notif_rate: 0.5
+  latest_notif_rate: 0.8
+  notif_start_time: 1975.0
 unit:
   start_population_size: "person"
   age_infectiousness_switch: "years old"
@@ -98,7 +104,7 @@ unit:
   screening_scaleup_shape: " "
   screening_inflection_time: " "
   time_to_screening_end_asymp: " "
-  base_sensitivity: ""
+  base_diagnostic_capacity: ""
   genexpert_sensitivity: ""
   detection_reduction: ""
   post_covid_improvement: ""
@@ -115,6 +121,9 @@ unit:
   smear_negative_death_rate: ""
   smear_positive_self_recovery: ""
   smear_negative_self_recovery: ""
+  initial_notif_rate: ""
+  latest_notif_rate: ""
+  notif_start_time: ""
 sources:
   start_population_size: "A value to avoid dividing by zero in the force of infection calculation"
   age_infectiousness_switch: "Set based on duration of BCG protection [@nguipdop2016, @roy2019]"
@@ -129,7 +138,7 @@ sources:
   screening_scaleup_shape: "Fitted [@ragonnet2022]"
   screening_inflection_time: "Fitted [@ragonnet2022]"
   time_to_screening_end_asymp: "Fitted [@ragonnet2022]"
-  base_sensitivity: "Fitted"
+  base_diagnostic_capacity: "Fitted"
   genexpert_sensitivity: "Fitted"
   detection_reduction: "Fitted"
   post_covid_improvement: "Fitted"
@@ -146,4 +155,7 @@ sources:
   smear_negative_death_rate: ""
   smear_positive_self_recovery: ""
   smear_negative_self_recovery: ""
+  initial_notif_rate: ""
+  latest_notif_rate: ""
+  notif_start_time: ""
   

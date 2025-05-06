@@ -7,7 +7,7 @@ from .utils import tanh_based_scaleup, triangle_wave_func
 from .outputs import request_model_outputs
 from .strat_age import get_age_strat
 from .strat_organ import get_organ_strat
-from summer2.functions.time import get_linear_interpolation_function
+
 
 compartments = const.compartments
 infectious_compartments = const.infectious_compartments
@@ -21,7 +21,7 @@ fixed_params = param_info["value"]
 
 def build_model(
     params: Dict[str, any],
-    xpert_sensitivity: bool = True,
+    xpert_improvement: bool = True,
     covid_effects: Dict[str, bool] = None,
     xpert_util_target: float = None,
     improved_detection_multiplier: float = None
@@ -32,7 +32,7 @@ def build_model(
 
     Args:
         params: Dictionary of parameters with fixed values
-        xpert_sensitivity: Whether to include GeneXpert sensitivity for detection multiplier
+        xpert_improvement: Whether to include improvement of GeneXpert utilisation for detection multiplier
         covid_effect: Whether to include COVID-related reduction and post-COVID detection improvement
     Returns:
         A configured CompartmentalModel object.
@@ -40,7 +40,7 @@ def build_model(
     if covid_effects is None:
         covid_effects = {
             "detection_reduction": False,
-            "post_covid_improvement": False
+            #"post_covid_improvement": False
         }
     
     desc  = []
@@ -110,8 +110,8 @@ def build_model(
         "Progression flows from latent compartments to infectious compartment are also implemented to model the progression from individuals "
         "with latent infection to active TB. "
     )
-    # Detection
-    model.add_transition_flow("detection", 1.0, "infectious", "recovered")
+    # Detection and treatment commencement
+    model.add_transition_flow("treatment_commencement", 1.0, "infectious", "recovered")
 
     # Age-stratification
     strat = get_age_strat(params)
@@ -126,18 +126,19 @@ def build_model(
     )
 
     # Organ-stratification
-    organ_strat, base_detection, sensitivity, covid_impacts, final_detection = get_organ_strat(
+    organ_strat, base_detection, diagnostic_capacity, diagnostic_improvement, covid_impacts, final_detection = get_organ_strat(
         infectious_compartments,
         organ_strata,
         fixed_params,
-        xpert_sensitivity=xpert_sensitivity,
+        xpert_improvement==xpert_improvement,
         covid_effects=covid_effects,
         xpert_util_target= xpert_util_target,
         improved_detection_multiplier= improved_detection_multiplier
     )
     model.stratify_with(organ_strat)
     model.request_track_modelled_value("base_detection", base_detection)
-    model.request_track_modelled_value("sensitivity", sensitivity)
+    model.request_track_modelled_value("diagnostic_capacity", diagnostic_capacity)
+    model.request_track_modelled_value("diagnostic_improvement", diagnostic_improvement)
     model.request_track_modelled_value("covid_impacts", covid_impacts)
     model.request_track_modelled_value("final_detection", final_detection)
 

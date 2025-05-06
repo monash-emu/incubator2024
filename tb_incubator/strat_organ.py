@@ -19,7 +19,7 @@ def get_organ_strat(
     infectious_compartments: List[str],
     organ_strata: List[str],
     fixed_params: Dict[str, any],
-    xpert_sensitivity: bool = True,
+    xpert_improvement: bool = True,
     covid_effects: Dict[str, bool] = None,
     xpert_util_target: float = None,
     improved_detection_multiplier: float = None
@@ -44,8 +44,7 @@ def get_organ_strat(
     # Add this check for None at the beginning of the function
     if covid_effects is None:
         covid_effects = {
-            "detection_reduction": False,
-            "post_covid_improvement": False
+            "detection_reduction": False
         }
 
     strat = Stratification("organ", organ_strata, infectious_compartments)
@@ -64,14 +63,14 @@ def get_organ_strat(
     )
     base_detection = detection_func
 
-    ## xpert sensitivity
-    sensitivity = Parameter("base_sensitivity")
-    if xpert_sensitivity:
+    ## xpert improvement
+    diagnostic_capacity = Parameter("base_diagnostic_capacity")
+    if xpert_improvement:
         utilisation = load_genexpert_util()
         genexpert_util = get_sigmoidal_interpolation_function(utilisation.index, utilisation)
-        genexpert_improvement = (1.0 - Parameter("base_sensitivity")) * Parameter("genexpert_sensitivity") * genexpert_util
+        diagnostic_improvement = (1.0 - Parameter("base_diagnostic_capacity")) * Parameter("genexpert_sensitivity") * genexpert_util
         
-        # Apply xpert_util_target only when xpert_sensitivity is True
+        # Apply xpert_util_target only when xpert_improvement is True
         if xpert_util_target is not None:
             assert isinstance(xpert_util_target, float) and xpert_util_target > 0 and xpert_util_target <=1.0, "xpert_util_target must be a float between 0 and 1."
             xpert_util_callable = get_time_callable(genexpert_util)
@@ -83,36 +82,24 @@ def get_organ_strat(
                     [2025.0, 2030.0], 
                     [1.0, xpert_util_target / current_util]
                 )
-                genexpert_improvement *= util_scale_factor
+                diagnostic_improvement *= util_scale_factor
         
-        sensitivity += genexpert_improvement
+        diagnostic_capacity += diagnostic_improvement
     
-    detection_func = detection_func * sensitivity
+    detection_func = detection_func * diagnostic_capacity
 
     if covid_effects["detection_reduction"]:
-        if covid_effects["post_covid_improvement"]:
-            # Case: detection reduction with post-covid improvement
-            covid_impacts = get_linear_interpolation_function(
-                [2019.0, 2020.0, 2023.0], [1.0, 1.0 - Parameter("detection_reduction"), Parameter("post_covid_improvement")]
-            )
-        else:
-            # Case: detection reduction without post-covid improvement
-            covid_impacts = get_linear_interpolation_function(
-                [2019.0, 2020.0, 2023.0], [1.0, 1.0 - Parameter("detection_reduction"), 1.0]
-            )
+        # Case: detection reduction
+        covid_impacts = get_linear_interpolation_function(
+            [2019.0, 2020.0, 2022.0], [1.0, 1.0 - Parameter("detection_reduction"), 1.0]
+        )
     else:
-        if covid_effects["post_covid_improvement"]:
-            # Case: no detection reduction but with post-covid improvement
-            covid_impacts = get_linear_interpolation_function(
-                [2019.0, 2020.0, 2023.0], [1.0, 1.0, Parameter("post_covid_improvement")]
-            )
-        else:
-            # Case: no COVID effects at all
-            covid_impacts = get_linear_interpolation_function(
-                [2019.0, 2020.0, 2023.0], [1.0, 1.0, 1.0]
-            )
+        covid_impacts = get_linear_interpolation_function(
+        [2019.0, 2020.0, 2022.0], [1.0, 1.0, 1.0]
+        )
     
     detection_func = detection_func * covid_impacts
+
     if improved_detection_multiplier is not None:
         assert isinstance(improved_detection_multiplier, float) and improved_detection_multiplier > 0, "improved_detection_multiplier must be a positive float."
         detection_func *= get_linear_interpolation_function([2025.0, 2030.0], [1.0, improved_detection_multiplier])
@@ -143,7 +130,7 @@ def get_organ_strat(
     TB_death_adjs = {k: Overwrite(v) for k, v in TB_death_adjs.items()}
 
     # Set flow and infectiousness adjustments
-    strat.set_flow_adjustments("detection", detection_adjs)
+    strat.set_flow_adjustments("treatment_commencement", detection_adjs)
     strat.set_flow_adjustments("self_recovery", self_recovery_adjustments)
     strat.set_flow_adjustments("TB_death", TB_death_adjs)
     for comp in infectious_compartments:
@@ -168,4 +155,4 @@ def get_organ_strat(
 
     #strat.set_flow_adjustments("acf_detection", organ_adjs)
     
-    return strat, base_detection, sensitivity, covid_impacts, final_detection
+    return strat, base_detection, diagnostic_capacity, diagnostic_improvement, covid_impacts, final_detection
