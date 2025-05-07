@@ -8,11 +8,11 @@ import tb_incubator.constants as const
 from .utils import tanh_based_scaleup
 import tb_incubator.constants as const
 
-compartments = const.compartments
-infectious_compartments = const.infectious_compartments
-organ_strata = const.organ_strata
-model_times = const.model_times
-agegroup_request = const.agegroup_request
+compartments = const.COMPARTMENTS
+infectious_compartments = const.INFECTIOUS_COMPARTMENTS
+organ_strata = const.ORGAN_STRATA
+model_times = const.MODEL_TIMES
+agegroup_request = const.AGEGROUP_REQUEST
 
 
 def get_organ_strat(
@@ -64,7 +64,8 @@ def get_organ_strat(
     base_detection = detection_func
 
     ## xpert improvement
-    diagnostic_capacity = Parameter("base_diagnostic_capacity")
+    diagnostic_capacity = Function(lambda: 1.0)
+    
     if xpert_improvement:
         utilisation = load_genexpert_util()
         genexpert_util = get_sigmoidal_interpolation_function(utilisation.index, utilisation)
@@ -85,6 +86,8 @@ def get_organ_strat(
                 diagnostic_improvement *= util_scale_factor
         
         diagnostic_capacity += diagnostic_improvement
+    else:
+        diagnostic_improvement = Function(lambda: 0.0)
     
     detection_func = detection_func * diagnostic_capacity
 
@@ -107,7 +110,7 @@ def get_organ_strat(
     final_detection = detection_func
 
     # Detection, self-recovery and infect death
-    inf_adj, detection_adjs, TB_death_adjs, self_recovery_adjustments = {}, {}, {}, {}
+    inf_adj, detection_adjs, tb_death_adjs, self_recovery_adjustments = {}, {}, {}, {}
     for organ_stratum in organ_strata:
         # Define infectiousness adjustment by organ status
         inf_adj_param = fixed_params[f"{organ_stratum}_infect_multiplier"]
@@ -122,17 +125,17 @@ def get_organ_strat(
         detection_adjs[organ_stratum] = fixed_params[param_name] * detection_func
 
         # Calculate infection death adjustment using detection adjustments
-        TB_death_adjs[organ_stratum] = Parameter(f"{param_strat}_death_rate")
+        tb_death_adjs[organ_stratum] = Parameter(f"{param_strat}_death_rate")
        
 
     # Apply the Multiply function to the detection adjustments
     detection_adjs = {k: Multiply(v) for k, v in detection_adjs.items()}
-    TB_death_adjs = {k: Overwrite(v) for k, v in TB_death_adjs.items()}
+    tb_death_adjs = {k: Overwrite(v) for k, v in tb_death_adjs.items()}
 
     # Set flow and infectiousness adjustments
     strat.set_flow_adjustments("treatment_commencement", detection_adjs)
     strat.set_flow_adjustments("self_recovery", self_recovery_adjustments)
-    strat.set_flow_adjustments("TB_death", TB_death_adjs)
+    strat.set_flow_adjustments("TB_death", tb_death_adjs)
     for comp in infectious_compartments:
         strat.add_infectiousness_adjustments(comp, inf_adj)
 
@@ -146,13 +149,5 @@ def get_organ_strat(
     for flow_name in ["early_activation", "late_activation"]:
         flow_adjs = {k: Multiply(v) for k, v in splitting_proportions.items()}
         strat.set_flow_adjustments(flow_name, flow_adjs)
-
-    #organ_adjs = {
-    #    "smear_positive": Multiply(1.0),
-    #    "smear_negative": Multiply(1.0),
-    #    "extrapulmonary": Multiply(0.0),
-    #}
-
-    #strat.set_flow_adjustments("acf_detection", organ_adjs)
     
     return strat, base_detection, diagnostic_capacity, diagnostic_improvement, covid_impacts, final_detection

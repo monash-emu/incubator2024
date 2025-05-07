@@ -9,7 +9,7 @@ from tb_incubator.utils import round_sigfig, get_target_from_name, get_row_col_f
 from tb_incubator.model import build_model
 from tb_incubator.input import load_targets, load_param_info
 from tb_incubator.plotting import get_standard_subplot_fig
-from tb_incubator.constants import indicator_names, quantiles
+from tb_incubator.constants import indicator_names, QUANTILES
 
 from estival import targets as est
 from estival import priors as esp
@@ -63,32 +63,33 @@ def get_all_priors(xpert_improvement = True, covid_effects: Dict[str, bool] = No
     """
     priors = [
         esp.UniformPrior("contact_rate", (0.1, 100.0)),
-        #esp.UniformPrior("progression_multiplier", (1.0,  2.0)),
-        #esp.UniformPrior("rr_infection_latent", (0.1, 0.50)),
-        #esp.UniformPrior("rr_infection_recovered", (0.2, 1.0)),
         esp.BetaPrior.from_mean_and_ci("rr_infection_latent", 0.20, (0.10, 0.30)),
         esp.BetaPrior.from_mean_and_ci("rr_infection_recovered", 0.50, (0.20, 0.99)),
-        #esp.TruncNormalPrior("self_recovery_rate", 0.350, 0.028, (0.200, 0.500)),
-        esp.UniformPrior("screening_scaleup_shape", (0.03, 0.07)),
-        esp.UniformPrior("screening_inflection_time", (2000.0, 2010.0)),
-        esp.UniformPrior("time_to_screening_end_asymp", (0.40, 0.50)),
-        esp.UniformPrior("notif_start_time", (1970.0, 1990.0)),
-        #esp.UniformPrior("seed_time", (1800.0, 1850.0)),  
-        #esp.UniformPrior("seed_duration", (1.0, 20.0)),
-        #esp.UniformPrior("seed_rate", (1.0, 100.0)), 
-        esp.UniformPrior("base_diagnostic_capacity", (0.1, 0.8)),
-        esp.UniformPrior("initial_notif_rate", (0.1, 0.90)),
-        esp.UniformPrior("latest_notif_rate", (0.4, 0.90)),
-        #esp.UniformPrior("contact_reduction", (0.1, 0.9)),
-        #esp.UniformPrior("post_covid_improvement", (1.0, 6.0)),
-        #esp.UniformPrior("sustained_improvement", (1.0, 3.0)),
-        #esp.UniformPrior("incidence_props_smear_positive_among_pulmonary", (0.4, 0.90)),
-        esp.BetaPrior.from_mean_and_ci("incidence_props_smear_positive_among_pulmonary", 0.65, (0.4, 0.90)),
-        #esp.BetaPrior.from_mean_and_ci("incidence_props_pulmonary", 0.9, (0.7, 0.95)),
         esp.TruncNormalPrior("smear_positive_death_rate", 0.392, 0.028, (0.335, 0.449)),
         esp.TruncNormalPrior("smear_negative_death_rate", 0.026, 0.0046, (0.017, 0.035)),
         esp.TruncNormalPrior("smear_positive_self_recovery", 0.232, 0.02, (0.177, 0.288)),
         esp.TruncNormalPrior("smear_negative_self_recovery", 0.139, 0.02, (0.07, 0.209)),
+        esp.UniformPrior("screening_scaleup_shape", (0.03, 0.3)),
+        esp.UniformPrior("screening_inflection_time", (2000.0, 2020.0)),
+        esp.UniformPrior("time_to_screening_end_asymp", (0.40, 1.0)),
+        esp.UniformPrior("notif_start_time", (1970.0, 2000.0)),
+        #esp.UniformPrior("base_diagnostic_capacity", (0.1, 0.8)),
+        esp.UniformPrior("initial_notif_rate", (0.1, 0.90)),
+        esp.UniformPrior("latest_notif_rate", (0.5, 0.90)),
+        esp.UniformPrior("mid_notif_rate", (0.1, 0.90)),
+        esp.BetaPrior.from_mean_and_ci("incidence_props_smear_positive_among_pulmonary", 0.65, (0.4, 0.90)),
+        #esp.UniformPrior("progression_multiplier", (1.0,  2.0)),
+        #esp.UniformPrior("rr_infection_latent", (0.1, 0.50)),
+        #esp.UniformPrior("rr_infection_recovered", (0.2, 1.0)),
+        #esp.TruncNormalPrior("self_recovery_rate", 0.350, 0.028, (0.200, 0.500)),
+        #esp.UniformPrior("seed_time", (1800.0, 1850.0)),  
+        #esp.UniformPrior("seed_duration", (1.0, 20.0)),
+        #esp.UniformPrior("seed_rate", (1.0, 100.0)), 
+        #esp.UniformPrior("contact_reduction", (0.1, 0.9)),
+        #esp.UniformPrior("post_covid_improvement", (1.0, 6.0)),
+        #esp.UniformPrior("sustained_improvement", (1.0, 3.0)),
+        #esp.UniformPrior("incidence_props_smear_positive_among_pulmonary", (0.4, 0.90)),
+        #esp.BetaPrior.from_mean_and_ci("incidence_props_pulmonary", 0.9, (0.7, 0.95)),
     ]
     if xpert_improvement:
         priors.append(esp.BetaPrior.from_mean_and_ci("genexpert_sensitivity", 0.9, (0.80, 0.99)))
@@ -108,14 +109,18 @@ def get_targets() -> list:
     target_data = load_targets()
 
     targets = [
-        est.NormalTarget(
-            "prevalence_log", 
-            np.log(target_data["prevalence"]),
-            esp.TruncNormalPrior("prevalence_dispersion", 0.0, 0.322, (0.0, np.inf))),
+        #est.NormalTarget(
+        #    "prevalence_log", 
+        #    np.log(target_data["prevalence"]),
+        #    esp.TruncNormalPrior("prevalence_dispersion", 0.0, 0.322, (0.0, np.inf))),
         est.NormalTarget(
             "notification_log", 
             np.log(target_data["notif2000"]),
-            esp.TruncNormalPrior("notification_dispersion", 0.0, 0.1, (0.0, np.inf)))
+            esp.TruncNormalPrior("notification_dispersion", 0.0, 0.1, (0.0, np.inf))),
+        est.NormalTarget(
+            "adults_prevalence_pulmonary_log", 
+            np.log(target_data["adults_prevalence_pulmonary_target"]),
+            esp.TruncNormalPrior("prevalence_dispersion", 0.0, 0.322, (0.0, np.inf))),
     ]
 
     return targets
@@ -246,8 +251,10 @@ def plot_spaghetti_calib_comparison(
         vertical_spacing=0.05,
         horizontal_spacing=0.05,
     ).update_layout(height=300*len(out_req), width=800, showlegend=False)
+
     out_style = {"color": "black", "width": 0.5}
     targ_style = {"color": "red"}
+
     for o, out in enumerate(out_req):
         for col in spaghetti[out].columns:
             line = go.Scatter(x=spaghetti.index, y=np.exp(spaghetti[out][col]), line=out_style)
@@ -420,13 +427,13 @@ def plot_output_ranges(
             (data.index >= current_plot_start_date) & (data.index <= plot_end_date)
         ]
 
-        for q, quant in enumerate(quantiles):
+        for q, quant in enumerate(QUANTILES):
             if quant not in filtered_data.columns:
                 continue
 
             alpha = (
-                min((quantiles.index(quant), len(quantiles) - quantiles.index(quant)))
-                / (len(quantiles) / 2)
+                min((QUANTILES.index(quant), len(QUANTILES) - QUANTILES.index(quant)))
+                / (len(QUANTILES) / 2)
                 * max_alpha
             )
             fill_color = f"rgba(0,30,180,{alpha})"
@@ -588,7 +595,7 @@ def calculate_xpert_scenario_outputs(
     # Base scenario (calculate outputs for all indicators)
     bcm = get_bcm(params, xpert_improvement=True, covid_effects=covid_effects)
     base_results = esamp.model_results_for_samples(idata_extract, bcm).results
-    base_quantiles = esamp.quantiles_for_results(base_results, quantiles)
+    base_quantiles = esamp.quantiles_for_results(base_results, QUANTILES)
 
     # Store results for the baseline scenario
     scenario_outputs = {"base_scenario": base_quantiles}
@@ -597,7 +604,7 @@ def calculate_xpert_scenario_outputs(
     for xpert_target in xpert_target_list:
         bcm = get_bcm(params, xpert_improvement=True, covid_effects=covid_effects, xpert_util_target=xpert_target)
         scenario_result = esamp.model_results_for_samples(idata_extract, bcm).results
-        scenario_quantiles = esamp.quantiles_for_results(scenario_result, quantiles)
+        scenario_quantiles = esamp.quantiles_for_results(scenario_result, QUANTILES)
 
         # Store the results for this scenario
         scenario_key = f"increase_xpert_util_target_by_{xpert_target}".replace(".", "_")
@@ -640,7 +647,7 @@ def calculate_detection_scenario_outputs(
     # Base scenario (calculate outputs for all indicators)
     bcm = get_bcm(params, xpert_improvement=True, covid_effects=covid_effects)
     base_results = esamp.model_results_for_samples(idata_extract, bcm).results
-    base_quantiles = esamp.quantiles_for_results(base_results, quantiles)
+    base_quantiles = esamp.quantiles_for_results(base_results, QUANTILES)
 
     # Store results for the baseline scenario
     scenario_outputs = {"base_scenario": base_quantiles}
@@ -649,7 +656,7 @@ def calculate_detection_scenario_outputs(
     for multiplier in detection_multiplier_list:
         bcm = get_bcm(params, xpert_improvement=True, covid_effects=covid_effects, improved_detection_multiplier=multiplier)
         scenario_result = esamp.model_results_for_samples(idata_extract, bcm).results
-        scenario_quantiles = esamp.quantiles_for_results(scenario_result, quantiles)
+        scenario_quantiles = esamp.quantiles_for_results(scenario_result, QUANTILES)
 
         # Store the results for this scenario
         scenario_key = f"increase_case_detection_by_{multiplier}".replace(".", "_")
@@ -704,7 +711,7 @@ def calculate_outputs_for_covid(
             model_results = esamp.model_results_for_samples(idata_extract, bcm)
             spaghetti_res = model_results.results
             ll_res = model_results.extras  # Extract additional results (e.g., log-likelihoods)
-            scenario_quantiles = esamp.quantiles_for_results(spaghetti_res, quantiles)
+            scenario_quantiles = esamp.quantiles_for_results(spaghetti_res, QUANTILES)
 
             # Initialize a dictionary to store indicator-specific outputs
             indicator_outputs = {}

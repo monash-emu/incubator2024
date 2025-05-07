@@ -1,21 +1,21 @@
 from pathlib import Path
 
-compartments = ["susceptible", 
+COMPARTMENTS = ["susceptible", 
                 "early_latent", 
                 "late_latent", 
                 "infectious", 
                 "recovered"]
 
-latent_compartments = ["early_latent", "late_latent"]
-infectious_compartments = ["infectious"]
+LATENT_COMPARTMENTS = ["early_latent", "late_latent"]
+INFECTIOUS_COMPARTMENTS = ["infectious"]
 
 
-model_times = [1800, 2035]
+MODEL_TIMES = [1800, 2035]
 
-agegroup_request = [[0, 4], [5, 14], [15, 34], [35, 49], [50, 100]]
-age_strata = [i[0] for i in agegroup_request]
+AGEGROUP_REQUEST = [[0, 4], [5, 14], [15, 34], [35, 49], [50, 100]]
+AGE_STRATA = [i[0] for i in AGEGROUP_REQUEST]
 
-organ_strata = [
+ORGAN_STRATA = [
     "smear_positive",
     "smear_negative",
     "extrapulmonary",
@@ -38,7 +38,7 @@ indicator_names = {
     "detection_rate": "Detection rate",
 }
 
-quantiles = [0.025, 0.25, 0.5, 0.75, 0.975]
+QUANTILES = [0.025, 0.25, 0.5, 0.75, 0.975]
 
 scenario_names = {
 	'base_scenario': 'Baseline scenario',

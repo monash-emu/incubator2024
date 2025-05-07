@@ -10,10 +10,11 @@ from plotly.subplots import make_subplots
 import arviz as az
 import plotly.io as pio
 import tb_incubator.constants as const
-from tb_incubator.constants import indicator_names, quantiles
+from tb_incubator.constants import indicator_names
 from tb_incubator.utils import get_row_col_for_subplots
 
 scenario_names = const.scenario_names
+quantiles = const.QUANTILES
 
 def plot_scenario_output_ranges(
     scenario_outputs: Dict[str, Dict[str, pd.DataFrame]],

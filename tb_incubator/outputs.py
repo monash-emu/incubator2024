@@ -6,10 +6,12 @@ import numpy as np
 from summer2.functions.time import get_linear_interpolation_function
 from summer2.parameters import Parameter
 
-compartments = const.compartments
-infectious_compartments = const.infectious_compartments
-organ_strata = const.organ_strata
-latent_compartments = const.latent_compartments
+compartments = const.COMPARTMENTS
+infectious_compartments = const.INFECTIOUS_COMPARTMENTS
+organ_strata = const.ORGAN_STRATA
+age_strata = const.AGE_STRATA
+latent_compartments = const.LATENT_COMPARTMENTS
+
 
 def request_model_outputs(
     model: CompartmentalModel,
@@ -69,7 +71,7 @@ def request_model_outputs(
     model.request_output_for_flow("treatment_commencement", "treatment_commencement")
     
     prop_reported_case = get_linear_interpolation_function(
-        [Parameter("notif_start_time"), 2017.0, 2023.0], [0.01, Parameter("initial_notif_rate"), Parameter("latest_notif_rate")]
+        [Parameter("notif_start_time"), 2017, 2023.0], [Parameter("initial_notif_rate"), Parameter("mid_notif_rate"),Parameter("latest_notif_rate")]
     )
 
     tracked_prop_reported_case = model.request_track_modelled_value("notif_ratio", prop_reported_case)
@@ -83,6 +85,70 @@ def request_model_outputs(
     model.request_function_output(
         "notification_per_incidence", notifs / DerivedOutput("incidence_raw") * 100.0
     )
+
+    # adults (age >15) smear positive
+    
+    # Request proportion of each compartment in the total population
+    for compartment in compartments:
+        model.request_output_for_compartments(f"number_{compartment}", compartment)
+        model.request_function_output(
+            f"prop_{compartment}",
+            DerivedOutput(f"number_{compartment}") / tot_pop,
+        )
+
+    # Request total population by age stratum
+    for age_stratum in age_strata:
+        model.request_output_for_compartments(
+            f"total_populationXage_{age_stratum}",
+            compartments,
+            strata={"age": str(age_stratum)},
+        )
+        
+    # request adults population
+    adults_pop = [
+        f"total_populationXage_{adults_stratum}" for adults_stratum in age_strata[2:]
+    ]
+
+    model.request_aggregate_output("adults_pop", adults_pop)
+
+    for organ_stratum in organ_strata:
+        model.request_output_for_compartments(
+            f"total_infectiousXorgan_{organ_stratum}",
+            infectious_compartments,
+            strata={"organ": str(organ_stratum)},
+        )
+        for age_stratum in age_strata:
+            model.request_output_for_compartments(
+                f"total_infectiousXorgan_{organ_stratum}Xage_{age_stratum}",
+                infectious_compartments,
+                strata={"organ": str(organ_stratum), "age": str(age_stratum)},
+            )
+        model.request_function_output(
+            f"prop_{organ_stratum}",
+            DerivedOutput(f"total_infectiousXorgan_{organ_stratum}")
+            / DerivedOutput("infectious_population_size"),
+        )
+
+    # Request adults smear_positive
+    adults_smear_positive = [
+        f"total_infectiousXorgan_smear_positiveXage_{adults_stratum}" for adults_stratum in age_strata[2:]
+    ]
+
+    model.request_aggregate_output("adults_smear_positive", adults_smear_positive)
+    model.request_function_output(
+        "prevalence_smear_positive",
+        1e5 * DerivedOutput("adults_smear_positive") / DerivedOutput("adults_pop"),
+    )
+
+    # request adults pulmonary (smear postive + smear neagative)
+    adults_pulmonary = [
+        f"total_infectiousXorgan_{smear_status}Xage_{adults_stratum}"
+        for adults_stratum in age_strata[2:]
+        for smear_status in organ_strata[:2]
+    ]
+    model.request_aggregate_output("adults_pulmonary", adults_pulmonary)
+    adults_prevalence_pulmonary = model.request_function_output("adults_prevalence_pulmonary", 1e5 * DerivedOutput("adults_pulmonary") / DerivedOutput("adults_pop"),)
+    model.request_function_output("adults_prevalence_pulmonary_log", np.log(adults_prevalence_pulmonary))
 
 
 

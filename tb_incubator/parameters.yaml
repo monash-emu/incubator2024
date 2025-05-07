@@ -34,7 +34,8 @@ descriptions:
   smear_negative_self_recovery: "Self-recovery rate for smear-negative and extrapulmonary TB"
   initial_notif_rate: "Initial proportion of TB patients that started treatment that are reported in official surveillance data"
   latest_notif_rate: "Latest proportion of TB patients that started treatment that are reported in official surveillance data"
-  notif_start_time: "Timepoint when case detection begins to increasee"
+  notif_start_time: "Timepoint when case detection begins to increase"
+  mid_notif_rate: ""
 value:
   start_population_size: 1.0
   age_infectiousness_switch: 15.0
@@ -62,8 +63,8 @@ value:
       50: 2.0
   #progression_multiplier : 1.429615829051863
   seed_time: 1805.0
-  seed_duration: 10.0
-  seed_rate: 70.0
+  seed_duration: 1.0
+  seed_rate: 1.0
   screening_scaleup_shape: 0.10
   screening_inflection_time: 2002.0
   time_to_screening_end_asymp: 1.598
@@ -84,9 +85,10 @@ value:
   smear_negative_death_rate: 0.032
   smear_positive_self_recovery: 0.257
   smear_negative_self_recovery: 0.130
-  initial_notif_rate: 0.5
+  initial_notif_rate: 0.1
   latest_notif_rate: 0.8
   notif_start_time: 1975.0
+  mid_notif_rate: 0.4
 unit:
   start_population_size: "person"
   age_infectiousness_switch: "years old"
@@ -124,6 +126,7 @@ unit:
   initial_notif_rate: ""
   latest_notif_rate: ""
   notif_start_time: ""
+  mid_notif_rate: ""
 sources:
   start_population_size: "A value to avoid dividing by zero in the force of infection calculation"
   age_infectiousness_switch: "Set based on duration of BCG protection [@nguipdop2016, @roy2019]"
@@ -158,4 +161,5 @@ sources:
   initial_notif_rate: ""
   latest_notif_rate: ""
   notif_start_time: ""
+  mid_notif_rate: ""
   

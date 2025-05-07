@@ -9,12 +9,12 @@ from .strat_age import get_age_strat
 from .strat_organ import get_organ_strat
 
 
-compartments = const.compartments
-infectious_compartments = const.infectious_compartments
-age_strata = const.age_strata
-organ_strata = const.organ_strata
-model_times = const.model_times
-agegroup_request = const.agegroup_request
+compartments = const.COMPARTMENTS
+infectious_compartments = const.INFECTIOUS_COMPARTMENTS
+age_strata = const.AGE_STRATA
+organ_strata = const.ORGAN_STRATA
+model_times = const.MODEL_TIMES
+agegroup_request = const.AGEGROUP_REQUEST
 
 param_info = load_param_info()
 fixed_params = param_info["value"]
@@ -130,10 +130,10 @@ def build_model(
         infectious_compartments,
         organ_strata,
         fixed_params,
-        xpert_improvement==xpert_improvement,
-        covid_effects=covid_effects,
-        xpert_util_target= xpert_util_target,
-        improved_detection_multiplier= improved_detection_multiplier
+        xpert_improvement = xpert_improvement,
+        covid_effects = covid_effects,
+        xpert_util_target = xpert_util_target,
+        improved_detection_multiplier = improved_detection_multiplier
     )
     model.stratify_with(organ_strat)
     model.request_track_modelled_value("base_detection", base_detection)

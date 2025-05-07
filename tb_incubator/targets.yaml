@@ -138,20 +138,6 @@ notification: # WHO data
     2022: 708658.
     2023: 804836.
 
-
-census_pop: # Indonesia's Statistics Bureau census data
-    2010: 237641326.0
-    2020: 270203917.0
-    2022: 275773774.0
-
-new_cases: # notification from 2016-2021 NTCP data
-    2016: 360565.0
-    2017: 443704.0
-    2018: 570289.0
-    2019: 568987.0
-    2020: 393323.0
-    #2021: 319064.0
-
 incidence: # estimated incidence per 100,000 population, WHO data
     2000: 369.97
     2001: 368.93
@@ -177,32 +163,6 @@ incidence: # estimated incidence per 100,000 population, WHO data
     2021: 338.99
     2022: 384.75
     2023: 387.64
-
-incidence_num: # Estimated number of incident cases (WHO)
-    2000: 792000
-    2001: 801000
-    2002: 809000
-    2003: 816000
-    2004: 821000
-    2005: 824000
-    2006: 827000
-    2007: 830000
-    2008: 831000
-    2009: 832000
-    2010: 834000
-    2011: 836000
-    2012: 839000
-    2013: 841000
-    2014: 842000
-    2015: 843000
-    2016: 843000
-    2017: 843000
-    2018: 843000
-    2019: 842000
-    2020: 817000
-    2021: 928000
-    2022: 1060000
-    2023: 1090000
 
 mortality: # estimated TB death per 100,000, WHO data
     2000: 56.06
@@ -232,7 +192,10 @@ mortality: # estimated TB death per 100,000, WHO data
 
 prevalence:
     #2014: 759.1 # Estimated bacteriologically confirmed pulmonary TB prevalence among population aged 15 years and above (per 100 000) from WHO 2013-2014 prevalence survey
-    2014: 660.0 # All forms of TB, all age groups
+    2014: 660.0 # A
+
+adults_prevalence_pulmonary: 
+    2014: [759.1, 589.7, 960.8]
 
 time_variant_bcg_perc:
     2000: 81.

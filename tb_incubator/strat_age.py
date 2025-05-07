@@ -6,10 +6,10 @@ from .input import get_death_rates
 import tb_incubator.constants as const
 from .utils import get_average_sigmoid
 
-compartments = const.compartments
-infectious_compartments = const.infectious_compartments
-age_strata = const.age_strata
-agegroup_request = const.agegroup_request
+compartments = const.COMPARTMENTS
+infectious_compartments = const.INFECTIOUS_COMPARTMENTS
+age_strata = const.AGE_STRATA
+agegroup_request = const.AGEGROUP_REQUEST
 
 # Age stratification
 def get_age_strat(params: Dict[str, any]) -> AgeStratification:
