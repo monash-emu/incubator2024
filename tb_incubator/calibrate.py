@@ -70,13 +70,13 @@ def get_all_priors(xpert_improvement = True, covid_effects: Dict[str, bool] = No
         esp.TruncNormalPrior("smear_positive_self_recovery", 0.232, 0.02, (0.177, 0.288)),
         esp.TruncNormalPrior("smear_negative_self_recovery", 0.139, 0.02, (0.07, 0.209)),
         esp.UniformPrior("screening_scaleup_shape", (0.03, 0.3)),
-        esp.UniformPrior("screening_inflection_time", (2000.0, 2020.0)),
-        esp.UniformPrior("time_to_screening_end_asymp", (0.40, 1.0)),
-        esp.UniformPrior("notif_start_time", (1970.0, 2000.0)),
-        #esp.UniformPrior("base_diagnostic_capacity", (0.1, 0.8)),
+        esp.UniformPrior("screening_inflection_time", (2004.0, 2020.0)),
+        esp.UniformPrior("time_to_screening_end_asymp", (0.40, 2.0)),
+        #esp.UniformPrior("notif_start_time", (1960.0, 1990.0)),
+        esp.UniformPrior("base_diagnostic_capacity", (0.1, 0.8)),
         esp.UniformPrior("initial_notif_rate", (0.1, 0.90)),
         esp.UniformPrior("latest_notif_rate", (0.5, 0.90)),
-        esp.UniformPrior("mid_notif_rate", (0.1, 0.90)),
+        #esp.UniformPrior("mid_notif_rate", (0.1, 0.90)),
         esp.BetaPrior.from_mean_and_ci("incidence_props_smear_positive_among_pulmonary", 0.65, (0.4, 0.90)),
         #esp.UniformPrior("progression_multiplier", (1.0,  2.0)),
         #esp.UniformPrior("rr_infection_latent", (0.1, 0.50)),
@@ -92,7 +92,7 @@ def get_all_priors(xpert_improvement = True, covid_effects: Dict[str, bool] = No
         #esp.BetaPrior.from_mean_and_ci("incidence_props_pulmonary", 0.9, (0.7, 0.95)),
     ]
     if xpert_improvement:
-        priors.append(esp.BetaPrior.from_mean_and_ci("genexpert_sensitivity", 0.9, (0.80, 0.99)))
+        priors.append(esp.UniformPrior("genexpert_sensitivity", (0.70, 0.99)))
     if covid_effects["detection_reduction"]:
         priors.append(esp.UniformPrior("detection_reduction", (0.1, 0.9)))
 
@@ -467,14 +467,73 @@ def plot_output_ranges(
             )
 
         # For other indicators, just plot the point estimate if available
-        if ind in target_data.keys():
-            target = target_data[ind]
-            filtered_target = target[
-                (target.index >= plot_start_date)
-                & (target.index <= target_data_start_date - 1)  # Only older data
+        if ind in [
+            "prevalence_smear_positive",
+            "adults_prevalence_pulmonary",
+        #    "incidence",
+        ]:
+            target_series = target_data[f"{ind}_target"]
+            lower_bound_series = target_data[f"{ind}_lower_bound"]
+            upper_bound_series = target_data[f"{ind}_upper_bound"]
+
+            filtered_target = target_series[
+                (target_series.index >= current_plot_start_date)
+                & (target_series.index <= plot_end_date)
+            ]
+            filtered_lower_bound = lower_bound_series[
+                (lower_bound_series.index >= current_plot_start_date)
+                & (lower_bound_series.index <= plot_end_date)
+            ]
+            filtered_upper_bound = upper_bound_series[
+                (upper_bound_series.index >= current_plot_start_date)
+                & (upper_bound_series.index <= plot_end_date)
             ]
 
-            if not filtered_target.empty:
+            # Plot the point estimates with error bars
+            fig.add_trace(
+                go.Scatter(
+                    x=filtered_target.index,
+                    y=filtered_target.values,
+                    mode="markers",
+                    marker={"size": 6.0, "color": "#FF6347"},
+                    error_y=dict(
+                        type="data",
+                        symmetric=False,
+                        array=filtered_upper_bound - filtered_target,
+                        arrayminus=filtered_target - filtered_lower_bound,
+                        color="#FF6347",
+                        thickness=1,
+                        width=2,
+                    ),
+                    name="",  # No name for legend
+                    showlegend=False,  # Hide legend for point estimates
+                ),
+                row=row,
+                col=col,
+            )
+        else:
+            # For other indicators, just plot the point estimate if available
+            if ind in target_data.keys():
+                target = target_data[ind]
+                filtered_target = target[
+                    (target.index >= current_plot_start_date)
+                    & (target.index <= plot_end_date)
+                ]
+
+                # Plot the target point estimates
+                fig.add_trace(
+                    go.Scatter(
+                        x=filtered_target.index,
+                        y=filtered_target,
+                        mode="markers",
+                        marker={"size": 4.0, "color": "#FF6347"},
+                        name="",  # No name for legend
+                        showlegend=False,  # Hide legend for point estimates
+                    ),
+                    row=row,
+                    col=col,
+                )
+
                 # Plot the historical data points
                 fig.add_trace(
                     go.Scatter(
@@ -533,12 +592,46 @@ def plot_output_ranges(
         fig.update_xaxes(range=[x_min, x_max], row=row, col=col)
 
         # Update y-axis range dynamically for each subplot
-        if all_y_values:
-            y_min = 0
-            y_max = max(all_y_values)
-            y_range = y_max - y_min
-            padding = 0.3 * y_range  # Consistent padding for all scenarios
-            fig.update_yaxes(range=[y_min, y_max + padding], row=row, col=col)
+        y_min = 0
+        y_max = max(
+            filtered_data.max().max(),
+            (
+                max(
+                    [
+                        filtered_target.max()
+                        for filtered_target in [
+                            filtered_target,
+                            filtered_lower_bound,
+                            filtered_upper_bound,
+                        ]
+                    ]
+                )
+                if ind 
+                in [
+                    "prevalence_smear_positive",
+                    "adults_prevalence_pulmonary",
+                    # "incidence",
+                ]
+                else (
+                    filtered_target.max()
+                    if ind in target_data.keys()
+                    else float("-inf")
+                )
+            ),
+        )
+        y_range = y_max - y_min
+        padding = 0.05 * y_range  # Consistent padding for all scenarios
+        fig.update_yaxes(
+            range=[y_min - padding, y_max + padding],
+            title=dict(
+                text=f"<b>{indicator_names.get(ind, ind.replace('_', ' ').capitalize())}</b>",
+                font=dict(size=12),  # Adjust font size for better visibility
+            ),
+            row=row,
+            col=col,
+            title_standoff=0,  # Adds space between axis and title for better visibility
+        )
+
 
     tick_interval = 50 if history else 2  # Set tick interval based on history
     fig.update_xaxes(

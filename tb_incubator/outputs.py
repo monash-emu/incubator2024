@@ -71,7 +71,8 @@ def request_model_outputs(
     model.request_output_for_flow("treatment_commencement", "treatment_commencement")
     
     prop_reported_case = get_linear_interpolation_function(
-        [Parameter("notif_start_time"), 2017, 2023.0], [Parameter("initial_notif_rate"), Parameter("mid_notif_rate"),Parameter("latest_notif_rate")]
+        [2017.0,2023.0],
+        [Parameter("initial_notif_rate"), Parameter("latest_notif_rate")]
     )
 
     tracked_prop_reported_case = model.request_track_modelled_value("notif_ratio", prop_reported_case)

@@ -64,7 +64,7 @@ def get_organ_strat(
     base_detection = detection_func
 
     ## xpert improvement
-    diagnostic_capacity = Function(lambda: 1.0)
+    diagnostic_capacity = Parameter("base_diagnostic_capacity") #Function(lambda: 1.0)
     
     if xpert_improvement:
         utilisation = load_genexpert_util()

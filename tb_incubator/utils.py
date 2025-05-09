@@ -4,6 +4,19 @@ import numpy as np
 import pandas as pd
 from summer2.functions.time import get_linear_interpolation_function
 
+def dict_to_markdown_table(data_dict, decimal_places=4):
+    # Create table header
+    markdown_table = "| Parameter | Value |\n|-----------|-------|\n"
+    
+    # Add each row
+    for key, value in data_dict.items():
+        # Round floating point values to specified decimal places
+        if isinstance(value, float):
+            value = round(value, decimal_places)
+        markdown_table += f"| {key} | {value} |\n"
+    
+    return markdown_table
+
 def get_param_table(param_info, prior_names=None):
     """
     Get parameter info in a tidy pd.Dataframe format.
