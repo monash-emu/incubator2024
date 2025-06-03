@@ -7,14 +7,70 @@ import pandas as pd
 from typing import List, Dict
 from pandas import DataFrame, Series
 from plotly.subplots import make_subplots
-import arviz as az
-import plotly.io as pio
 import tb_incubator.constants as const
-from tb_incubator.constants import indicator_names
 from tb_incubator.utils import get_row_col_for_subplots
 
 scenario_names = const.scenario_names
 quantiles = const.QUANTILES
+indicator_names = const.indicator_names
+
+def get_combined_plot(
+    plot_list: List[go.Figure],
+    n_cols: int = 2,
+    subplot_titles: List[str] = None,
+    shared_yaxes: bool = True,
+    shared_xaxes: bool = False,
+    showlegend: bool = False,
+) -> go.Figure:
+    
+    nrows = int(np.ceil(len(plot_list) / n_cols))
+    
+    # Handle subplot titles
+    if subplot_titles is None:
+        # Generate default titles if none provided
+        formatted_titles = [f"<b>Plot {i+1}</b>" for i in range(len(plot_list))]
+    else:
+        # Format the provided titles with bold tags
+        formatted_titles = [f"<b>{title}</b>" for title in subplot_titles]
+        
+        # Extend with default titles if subplot_titles is shorter than plot_list
+        if len(formatted_titles) < len(plot_list):
+            for i in range(len(formatted_titles), len(plot_list)):
+                formatted_titles.append(f"<b>Plot {i+1}</b>")
+    
+    fig = make_subplots(
+        rows=nrows,
+        cols=n_cols,
+        subplot_titles=formatted_titles,  # Use the formatted titles list
+        shared_yaxes=shared_yaxes,
+        shared_xaxes=shared_xaxes,
+        vertical_spacing=0.05,
+        horizontal_spacing=0.05,
+    )
+    
+    for annotation in fig['layout']['annotations']:
+        annotation['font'] = dict(size=12)  # Set font size for titles
+        
+    for i, plot in enumerate(plot_list):
+        row = i // n_cols + 1
+        col = i % n_cols + 1
+        
+        for trace in plot.data:
+            fig.add_trace(trace, row=row, col=col)
+    
+    fig.update_layout(
+        height=300 * nrows,
+        width=550 * n_cols,
+        showlegend=showlegend,
+        margin=dict(
+            l=50,  # left margin
+            r=50,  # right margin
+            t=60,  # top margin (increased for titles)
+            b=30   # bottom margin
+        )
+    )
+    
+    return fig
 
 def plot_scenario_output_ranges(
     scenario_outputs: Dict[str, Dict[str, pd.DataFrame]],
@@ -55,9 +111,9 @@ def plot_scenario_output_ranges(
         annotation['font'] = dict(size=12)  # Set font size for titles
 
     base_color = (0, 30, 180)  # Base scenario RGB color as a tuple
-    target_color = "red"  # Use a consistent color for 2035 target points
+    target_color = "black"  # Use a consistent color for 2035 target points
     scenario_colors = (
-        px.colors.qualitative.Plotly
+        px.colors.qualitative.Dark2
     )  # Use Plotly colors for other scenarios
 
     for i, ind in enumerate(indicators):
@@ -228,7 +284,7 @@ def plot_scenario_output_ranges_by_col(
     n_cols = 2
 
     # Define the color scheme using Plotly's qualitative palette
-    colors = px.colors.qualitative.Plotly
+    colors = px.colors.qualitative.Dark2
     indicator_colors = {
         ind: colors[i % len(colors)] for i, ind in enumerate(indicators)
     }
@@ -557,7 +613,7 @@ def get_standard_subplot_fig(
     """
     heights = [320, 600, 680]
     height = 680 if n_rows > 3 else heights[n_rows - 1]
-    fig = make_subplots(n_rows, n_cols, subplot_titles=titles, vertical_spacing=0.08, horizontal_spacing=0.05, shared_yaxes=share_y)
+    fig = make_subplots(n_rows, n_cols, subplot_titles=titles, vertical_spacing=0.08, horizontal_spacing=0.06, shared_yaxes=share_y)
     return fig.update_layout(margin={i: 25 for i in ['t', 'b', 'l', 'r']}, height=height)
 
 def plot_model_vs_actual(
@@ -664,9 +720,9 @@ def set_plot_label(plot, indicator_names, y_axis):
     )
 
 
-def display_plot(plot, plot_name, image_format='svg'):
+def display_plot(plot, plot_name, image_format='svg', image_width: int = None, image_height: int = None, image_scale=1.0):
     # Save the figure in specified format
-    plot.write_image(image_path / f"{plot_name}.{image_format}", format=image_format)
+    plot.write_image(image_path / f"{plot_name}.{image_format}", format=image_format, width=image_width, height=image_height, scale=image_scale)
     
     # Choose appropriate display method based on format
     if image_format.lower() == 'svg':

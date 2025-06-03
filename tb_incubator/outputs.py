@@ -26,7 +26,7 @@ def request_model_outputs(
 
     # latent percentage
     latent_pop = model.request_output_for_compartments(
-        "latent_pop", latent_compartments, save_results=False
+        "latent_pop", latent_compartments
     )
     model.request_function_output("percentage_latent", latent_pop / tot_pop * 100.0)
 

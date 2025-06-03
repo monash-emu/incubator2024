@@ -3,11 +3,11 @@ from summer2 import CompartmentalModel
 from summer2.parameters import Parameter, Time, Function
 from .input import get_population_entry_rate, load_param_info
 import tb_incubator.constants as const
-from .utils import tanh_based_scaleup, triangle_wave_func
+from .utils import triangle_wave_func
 from .outputs import request_model_outputs
 from .strat_age import get_age_strat
 from .strat_organ import get_organ_strat
-
+from .detection import get_detection_func
 
 compartments = const.COMPARTMENTS
 infectious_compartments = const.INFECTIOUS_COMPARTMENTS
@@ -40,7 +40,6 @@ def build_model(
     if covid_effects is None:
         covid_effects = {
             "detection_reduction": False,
-            #"post_covid_improvement": False
         }
     
     desc  = []
@@ -126,21 +125,14 @@ def build_model(
     )
 
     # Organ-stratification
-    organ_strat, base_detection, diagnostic_capacity, diagnostic_improvement, covid_impacts, final_detection = get_organ_strat(
-        infectious_compartments,
-        organ_strata,
-        fixed_params,
-        xpert_improvement = xpert_improvement,
-        covid_effects = covid_effects,
-        xpert_util_target = xpert_util_target,
-        improved_detection_multiplier = improved_detection_multiplier
-    )
+    detection_func, base_detection, diagnostic_capacity, diagnostic_improvement = get_detection_func(xpert_improvement, covid_effects, xpert_util_target, improved_detection_multiplier)
+    organ_strat= get_organ_strat(fixed_params, detection_func)
     model.stratify_with(organ_strat)
+
     model.request_track_modelled_value("base_detection", base_detection)
     model.request_track_modelled_value("diagnostic_capacity", diagnostic_capacity)
     model.request_track_modelled_value("diagnostic_improvement", diagnostic_improvement)
-    model.request_track_modelled_value("covid_impacts", covid_impacts)
-    model.request_track_modelled_value("final_detection", final_detection)
+    model.request_track_modelled_value("final_detection", detection_func)
 
     desc.append(
         "The detection rate refers to the progression of individuals with active TB (I) "

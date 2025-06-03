@@ -31,11 +31,14 @@ indicator_names = {
     "notification": "TB notifications",
     "incidence": "TB incidence (per 100,000/year)",
     "percentage_latent": "Percentage of latent TB infection (%)",
-    "prevalence": "TB prevalence (per 100,000/year)",
+    "prevalence": "TB (all forms) prevalence (per 100,000/year)",
+    "adults_prevalence_pulmonary": "Prevalence of pulmonary TB among adults (per 100,000/year)",
+    "notif_ratio": "Proportion of reported cases",
     "case_detection_rate": "Case detection rate",
     "case_notification_rate": "Case notification rate",
     "mortality": "TB deaths (per 100,000/year)",
     "detection_rate": "Detection rate",
+    "final_detection": "Rate of treatment commencement (/year)"
 }
 
 QUANTILES = [0.025, 0.25, 0.5, 0.75, 0.975]

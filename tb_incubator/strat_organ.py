@@ -3,10 +3,8 @@ from summer2 import Stratification
 from summer2 import Overwrite, Multiply
 from summer2.parameters import Parameter, Time, Function
 from summer2.functions.time import get_sigmoidal_interpolation_function, get_linear_interpolation_function, get_time_callable
-from .input import load_genexpert_util
 import tb_incubator.constants as const
-from .utils import tanh_based_scaleup
-import tb_incubator.constants as const
+
 
 compartments = const.COMPARTMENTS
 infectious_compartments = const.INFECTIOUS_COMPARTMENTS
@@ -16,13 +14,8 @@ agegroup_request = const.AGEGROUP_REQUEST
 
 
 def get_organ_strat(
-    infectious_compartments: List[str],
-    organ_strata: List[str],
     fixed_params: Dict[str, any],
-    xpert_improvement: bool = True,
-    covid_effects: Dict[str, bool] = None,
-    xpert_util_target: float = None,
-    improved_detection_multiplier: float = None
+    detection_func: Function,
 ) -> Stratification:
     """
     Creates and configures an organ stratification for the model. This includes defining
@@ -40,74 +33,10 @@ def get_organ_strat(
     Returns:
         A Stratification object configured with organ-specific adjustments.
     """
-
-    # Add this check for None at the beginning of the function
-    if covid_effects is None:
-        covid_effects = {
-            "detection_reduction": False
-        }
-
     strat = Stratification("organ", organ_strata, infectious_compartments)
 
     # Define different detection rates by organ status
     detection_adjs = {}
-    detection_func = Function(
-        tanh_based_scaleup,
-        [
-            Time,
-            Parameter("screening_scaleup_shape"),
-            Parameter("screening_inflection_time"),
-            0.0,
-            1.0 / Parameter("time_to_screening_end_asymp")
-        ]
-    )
-    base_detection = detection_func
-
-    ## xpert improvement
-    diagnostic_capacity = Parameter("base_diagnostic_capacity") #Function(lambda: 1.0)
-    
-    if xpert_improvement:
-        utilisation = load_genexpert_util()
-        genexpert_util = get_sigmoidal_interpolation_function(utilisation.index, utilisation)
-        diagnostic_improvement = (1.0 - Parameter("base_diagnostic_capacity")) * Parameter("genexpert_sensitivity") * genexpert_util
-        
-        # Apply xpert_util_target only when xpert_improvement is True
-        if xpert_util_target is not None:
-            assert isinstance(xpert_util_target, float) and xpert_util_target > 0 and xpert_util_target <=1.0, "xpert_util_target must be a float between 0 and 1."
-            xpert_util_callable = get_time_callable(genexpert_util)
-            current_util = float(xpert_util_callable(2025.0))
-            
-            # Create scaling function that goes from current to target utilization
-            if xpert_util_target > current_util:  # Only scale up if target is higher
-                util_scale_factor = get_linear_interpolation_function(
-                    [2025.0, 2030.0], 
-                    [1.0, xpert_util_target / current_util]
-                )
-                diagnostic_improvement *= util_scale_factor
-        
-        diagnostic_capacity += diagnostic_improvement
-    else:
-        diagnostic_improvement = Function(lambda: 0.0)
-    
-    detection_func = detection_func * diagnostic_capacity
-
-    if covid_effects["detection_reduction"]:
-        # Case: detection reduction
-        covid_impacts = get_linear_interpolation_function(
-            [2019.0, 2020.0, 2022.0], [1.0, 1.0 - Parameter("detection_reduction"), 1.0]
-        )
-    else:
-        covid_impacts = get_linear_interpolation_function(
-        [2019.0, 2020.0, 2022.0], [1.0, 1.0, 1.0]
-        )
-    
-    detection_func = detection_func * covid_impacts
-
-    if improved_detection_multiplier is not None:
-        assert isinstance(improved_detection_multiplier, float) and improved_detection_multiplier > 0, "improved_detection_multiplier must be a positive float."
-        detection_func *= get_linear_interpolation_function([2025.0, 2030.0], [1.0, improved_detection_multiplier])
-
-    final_detection = detection_func
 
     # Detection, self-recovery and infect death
     inf_adj, detection_adjs, tb_death_adjs, self_recovery_adjustments = {}, {}, {}, {}
@@ -150,4 +79,4 @@ def get_organ_strat(
         flow_adjs = {k: Multiply(v) for k, v in splitting_proportions.items()}
         strat.set_flow_adjustments(flow_name, flow_adjs)
     
-    return strat, base_detection, diagnostic_capacity, diagnostic_improvement, covid_impacts, final_detection
+    return strat

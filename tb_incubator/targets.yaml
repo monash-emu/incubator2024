@@ -1,8 +1,8 @@
 incidence_target:
-    2030: 65
+    2030: 65.0
 
 mortality_target:
-    2030: 6
+    2030: 6.0
 
 genexpert_utilisation:
     2015: 0.0
@@ -223,7 +223,7 @@ time_variant_bcg_perc:
     2022: 93.
     2023: 88.
 
-population:
+total_population:
     2000: 216077788.0
     2001: 219097899.0
     2002: 222088493.0
@@ -248,3 +248,8 @@ population:
     2021: 276758052.0
     2022: 278830527.0
     2023: 281190064.0
+
+census_pop: # Indonesia's Statistics Bureau census data
+    2010: 237641326.0
+    2020: 270203917.0
+    2022: 275773774.0
