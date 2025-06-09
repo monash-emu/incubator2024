@@ -706,8 +706,7 @@ def calculate_xpert_scenario_outputs(
     """
     if covid_effects is None:
         covid_effects = {
-            "detection_reduction": False,
-            "post_covid_improvement": False
+            "detection_reduction": False
         }
 
     # Base scenario (calculate outputs for all indicators)
@@ -758,8 +757,7 @@ def calculate_detection_scenario_outputs(
     """
     if covid_effects is None:
         covid_effects = {
-            "detection_reduction": False,
-            "post_covid_improvement": False
+            "detection_reduction": False
         }
 
     # Base scenario (calculate outputs for all indicators)

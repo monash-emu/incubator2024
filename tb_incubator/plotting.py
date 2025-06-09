@@ -132,7 +132,7 @@ def plot_scenario_output_ranges(
                 rgb_color = base_color
             else:
                 hex_color = scenario_colors[scenario_idx % len(scenario_colors)]
-                rgb_color = hex_to_rgb(hex_color)  # Convert hex to RGB tuple
+                rgb_color = color_to_rgb(hex_color)  # Convert hex to RGB tuple
 
             data = quantile_outputs[ind]
 
@@ -347,7 +347,7 @@ def plot_scenario_output_ranges_by_col(
                     / (len(quantiles) / 2)
                     * max_alpha
                 )
-                fill_color = f"rgba({hex_to_rgb(color)[0]}, {hex_to_rgb(color)[1]}, {hex_to_rgb(color)[2]}, {alpha})"  # Ensure correct alpha blending
+                fill_color = f"rgba({color_to_rgb(color)[0]}, {color_to_rgb(color)[1]}, {color_to_rgb(color)[2]}, {alpha})"  # Ensure correct alpha blending
 
                 fig.add_trace(
                     go.Scatter(
@@ -452,12 +452,21 @@ def plot_scenario_output_ranges_by_col(
 
     return fig
 
-def hex_to_rgb(hex_color):
-    """
-    Convert hex color (e.g., '#636EFA') to an rgb color tuple (e.g., (99, 110, 250)).
-    """
-    hex_color = hex_color.lstrip("#")
-    return tuple(int(hex_color[i : i + 2], 16) for i in (0, 2, 4))    
+def color_to_rgb(color):
+    """Convert hex color OR rgb string to RGB tuple."""
+    import re
+    
+    if color.startswith('rgb('):
+        match = re.findall(r'\d+', color)
+        if len(match) >= 3:
+            return tuple(int(x) for x in match[:3])
+    
+    if color.startswith('#') or len(color) == 6:
+        color = color.lstrip("#")
+        return tuple(int(color[i:i+2], 16) for i in (0, 2, 4))
+    
+    return (99, 110, 250)  # This is default blue
+
 
 def plot_tracked_outputs(
         outs: pd.DataFrame, 
