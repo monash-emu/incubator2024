@@ -687,7 +687,7 @@ def tabulate_calib_results(
 def calculate_xpert_scenario_outputs(
     params: Dict[str, float],
     idata_extract: az.InferenceData,
-    indicators: List[str] = ['incidence', 'prevalence', 'notification', 'mortality'],
+    indicators: List[str] = ['incidence', 'prevalence', 'notification', 'mortality', 'treatment_commencement', 'diagnostic_capacity'],
     xpert_target_list: List[float] = [0.90, 0.80, 0.70],
     covid_effects: Dict[str, bool] = None,
 ) -> Dict[str, Dict[str, pd.DataFrame]]:
@@ -738,7 +738,7 @@ def calculate_xpert_scenario_outputs(
 def calculate_detection_scenario_outputs(
     params: Dict[str, float],
     idata_extract: az.InferenceData,
-    indicators: List[str] = ['incidence', 'prevalence', 'notification', 'mortality'],
+    indicators: List[str] = ['incidence', 'prevalence', 'notification', 'mortality', 'treatment_commencement', 'diagnostic_capacity'],
     detection_multiplier_list: List[float] = [2.0, 5.0, 10.0],
     covid_effects: Dict[str, bool] = None,
 ) -> Dict[str, Dict[str, pd.DataFrame]]:
@@ -785,5 +785,69 @@ def calculate_detection_scenario_outputs(
 
     return scenario_outputs
 
+def calculate_combined_detection_xpert_outputs(
+    params: Dict[str, float],
+    idata_extract: az.InferenceData,
+    indicators: List[str] = ['incidence', 'prevalence', 'notification', 'mortality', 'treatment_commencement', 'diagnostic_capacity'],
+    xpert_target_list: List[float] = [0.90, 0.80, 0.70],
+    detection_multiplier_list: List[float] = [2.0, 5.0, 10.0],
+    covid_effects: Dict[str, bool] = None,
+) -> Dict[str, Dict[str, pd.DataFrame]]:
+    """
+    Calculate the model results for combined scenarios with different xpert utilisation targets and detection multipliers,
+    and return the baseline and scenario outputs.
+
+    Args:
+        params: Dictionary containing model parameters.
+        idata_extract: InferenceData object containing the model data.
+        indicators: List of indicators to return for the other scenarios.
+        xpert_target_list: List of utilisation targets for improved detection to loop through.
+        detection_multiplier_list: List of multipliers for improved detection to loop through.
+
+    Returns:
+        A dictionary containing results for the baseline and each combined scenario.
+    """
+    if covid_effects is None:
+        covid_effects = {
+            "detection_reduction": False
+        }
+
+    # Base scenario (calculate outputs for all indicators)
+    bcm = get_bcm(params, xpert_improvement=True, covid_effects=covid_effects)
+    base_results = esamp.model_results_for_samples(idata_extract, bcm).results
+    base_quantiles = esamp.quantiles_for_results(base_results, QUANTILES)
+
+    # Store results for the baseline scenario
+    scenario_outputs = {"base_scenario": base_quantiles}
+
+    # Calculate quantiles for each combined scenario of xpert utilisation and detection multiplier
+    for xpert_target in xpert_target_list:
+        for multiplier in detection_multiplier_list:
+            bcm = get_bcm(
+                params,
+                xpert_improvement=True,
+                covid_effects=covid_effects,
+                xpert_util_target=xpert_target,
+                improved_detection_multiplier=multiplier
+            )
+
+            scenario_result = esamp.model_results_for_samples(idata_extract, bcm).results
+            scenario_quantiles = esamp.quantiles_for_results(scenario_result, QUANTILES)
+
+            # Create a scenario key combining both factors
+            scenario_key = (
+                f"increase_xpert_util_target_by_{xpert_target}".replace(".", "_")
+                + f"_and_case_detection_by_{multiplier}".replace(".", "_")
+            )  
+
+            # Store the results for this combined scenario
+            scenario_outputs[scenario_key] = scenario_quantiles
+
+    # Extract only the relevant indicators for each scenario
+    for scenario_key in scenario_outputs:
+        if scenario_key != "base_scenario":
+            scenario_outputs[scenario_key] = scenario_outputs[scenario_key][indicators]
+
+    return scenario_outputs
 
 

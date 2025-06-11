@@ -1,8 +1,62 @@
 from jax import numpy as jnp
 from math import log, exp
+from typing import Dict
 import numpy as np
 import pandas as pd
 from summer2.functions.time import get_linear_interpolation_function
+
+def calculate_proportional_reduction(
+    scenario_outputs: Dict[str, Dict[str, pd.DataFrame]],
+    indicator: str,
+    baseline_year: int,
+    target_year: int
+) -> pd.DataFrame:
+    """
+    Calculate the proportional reduction of an indicator between baseline and target years.
+
+    Args:
+        scenario_outputs: Dictionary of scenario outputs (from your combined detection function).
+        indicator: Indicator to calculate reduction for (e.g. 'mortality', 'incidence').
+        baseline_year: Baseline year to compare from (e.g. 2015).
+        target_year: Target year to compare to (e.g. 2050).
+
+    Returns:
+        DataFrame with scenario and % reduction in the indicator.
+    """
+    reduction_results = []
+
+    for scenario_name, outputs in scenario_outputs.items():
+        # Some scenarios may not include this indicator (defensive check)
+        if indicator not in outputs:
+            print(f"{scenario_name}: missing indicator {indicator}")
+            continue
+
+        df = outputs[indicator]
+
+        # Check if both years are present
+        if baseline_year in df.index and target_year in df.index:
+            baseline_value = df.loc[baseline_year, 0.5]  # median
+            target_value = df.loc[target_year, 0.5]       # median
+
+            proportional_reduction = (baseline_value - target_value) / baseline_value
+            percent_reduction = proportional_reduction * 100
+
+            reduction_results.append({
+                "scenario": scenario_name,
+                f"percent_reduction_{indicator}_{target_year}": percent_reduction
+            })
+        else:
+            print(f"{scenario_name}: missing data for {baseline_year} or {target_year}")
+
+    # Convert to DataFrame
+    reduction_df = pd.DataFrame(reduction_results)
+
+    # Sort by reduction for nice viewing
+    column_name = f"percent_reduction_{indicator}_{target_year}"
+    reduction_df = reduction_df.sort_values(by=column_name, ascending=False)
+
+    return reduction_df
+
 
 def dict_to_markdown_table(data_dict, decimal_places=4):
     # Create table header

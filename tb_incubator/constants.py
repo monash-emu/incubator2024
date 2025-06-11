@@ -38,7 +38,9 @@ indicator_names = {
     "case_notification_rate": "Case notification rate",
     "mortality": "TB deaths (per 100,000/year)",
     "detection_rate": "Detection rate",
-    "final_detection": "Rate of treatment commencement (/year)"
+    "final_detection": "Rate of treatment commencement (/year)",
+    "treatment_commencement": "No. of people commenced for treatment",
+    "diagnostic_capacity": "Diagnostic algorithm capacity",
 }
 
 QUANTILES = [0.025, 0.25, 0.5, 0.75, 0.975]
@@ -51,8 +53,15 @@ scenario_names = {
     'increase_case_detection_by_2_0': 'Detection rate doubled (2×)',
     'increase_case_detection_by_5_0': 'Detection rate five-fold (5×)',
     'increase_case_detection_by_10_0': 'Detection rate ten-fold (10×)',
-    #'no_covid': 'Counterfactual: No COVID-19',
-    #'case_detection_reduction': 'COVID-19: Case detection reduction'
+	'increase_xpert_util_target_by_0_9_and_case_detection_by_2_0': 'Xpert Util: 90%; Detection: 2×',
+    'increase_xpert_util_target_by_0_8_and_case_detection_by_2_0': 'Xpert Util: 80%; Detection: 2×',
+    'increase_xpert_util_target_by_0_7_and_case_detection_by_2_0': 'Xpert Util: 70%; Detection: 2×',
+    'increase_xpert_util_target_by_0_9_and_case_detection_by_5_0': 'Xpert Util 90%; Detection: 5×',
+    'increase_xpert_util_target_by_0_8_and_case_detection_by_5_0': 'Xpert Util: 80%; Detection: 5×',
+    'increase_xpert_util_target_by_0_7_and_case_detection_by_5_0': 'Xpert Util: 70%; Detection: 5×',
+	'increase_xpert_util_target_by_0_9_and_case_detection_by_10_0': 'Xpert Util: 90%; Detection: 10×',
+    'increase_xpert_util_target_by_0_8_and_case_detection_by_10_0': 'Xpert Util: 80%; Detection: 10×',
+    'increase_xpert_util_target_by_0_7_and_case_detection_by_10_0': 'Xpert Util: 70%; Detection: 10×',
 }
 
 covid_configs = {

@@ -14,6 +14,97 @@ scenario_names = const.scenario_names
 quantiles = const.QUANTILES
 indicator_names = const.indicator_names
 
+def plot_indicator_vs_indicator(
+    scenario_outputs: Dict[str, Dict[str, pd.DataFrame]],
+    indicators: List[str],
+    year_range: List[int] = [2023],
+    quantile: float = 0.5,
+    showlegend: bool = True,
+    plot_trajectory: bool = False,
+) -> go.Figure:
+    """
+    Plot indicator_y vs indicator_x for each scenario at selected years.
+
+    Args:
+        scenario_outputs: Dictionary of scenario outputs.
+        indicator_x: Name of indicator to plot on x-axis.
+        indicator_y: Name of indicator to plot on y-axis.
+        year_range: List of years to plot (can be a single year or multiple years).
+        quantile: Quantile to use for plotting (default = 0.5).
+
+    Returns:
+        Plotly figure.
+    """
+    fig = go.Figure()
+
+    scenario_colors = px.colors.qualitative.Dark2
+
+    for scenario_idx, (scenario_name, quantile_outputs) in enumerate(scenario_outputs.items()):
+        display_name = scenario_names.get(scenario_name, scenario_name)
+
+        # Extract data for x and y indicators
+        x_data = quantile_outputs[indicators[0]]
+        y_data = quantile_outputs[indicators[-1]]
+
+        legend_added = False
+
+        # Plot each year as a point, or entire trajectory if year_range is a range
+        for year in year_range:
+            if year in x_data.index and year in y_data.index:
+                fig.add_trace(
+                    go.Scatter(
+                        x=[x_data.loc[year, quantile]],
+                        y=[y_data.loc[year, quantile]],
+                        mode='markers+text',
+                        text=[str(year)],
+                        textposition='top center',
+                        marker=dict(
+                            size=8,
+                            color=scenario_colors[scenario_idx % len(scenario_colors)],
+                        ),
+                        name=display_name if not legend_added else None,  # Legend only for first point
+                        showlegend=showlegend and not legend_added,
+                    )
+                )
+                legend_added = True
+            
+        # OPTIONAL: Plot trajectory (line through all years)
+        if plot_trajectory:
+            if len(year_range) > 1:
+                valid_years = [y for y in year_range if y in x_data.index and y in y_data.index]
+                fig.add_trace(
+                    go.Scatter(
+                        x=[x_data.loc[y, quantile] for y in valid_years],
+                        y=[y_data.loc[y, quantile] for y in valid_years],
+                        mode='lines',
+                        line=dict(
+                            color=scenario_colors[scenario_idx % len(scenario_colors)]
+                        ),
+                        name=f"{display_name} trajectory",
+                        showlegend=False
+                    )
+                )
+
+        fig.update_layout(
+            #title=f"{indicators[0]} vs {indicators[-1]}",
+            xaxis_title=indicator_names.get(indicators[0], indicators[0]),
+            yaxis_title=indicator_names.get(indicators[-1], indicators[-1]),
+            legend=dict(
+                title='Scenario',
+                orientation='h',
+                yanchor='top',
+                y=-0.25,
+                xanchor='center',
+                x=0.5,
+                font=dict(size=10),
+            ),
+            margin=dict(l=50, r=50, t=50, b=80)
+        )
+
+    return fig
+
+
+
 def get_combined_plot(
     plot_list: List[go.Figure],
     n_cols: int = 2,
@@ -79,6 +170,8 @@ def plot_scenario_output_ranges(
     plot_start_date: int = 1800,
     plot_end_date: int = 2023,
     max_alpha: float = 0.7,
+    showlegend: bool = True,
+    show_ranges: bool = True,
 ) -> go.Figure:
     """
     Plot the credible intervals for each indicator in a single plot across multiple scenarios.
@@ -144,43 +237,45 @@ def plot_scenario_output_ranges(
             # Show the legend only for the first indicator
             show_legend = i == 0
 
-            for q, quant in enumerate(quantiles):
-                if quant not in filtered_data.columns:
-                    continue
+            if show_ranges:
+                for q, quant in enumerate(quantiles):
+                    if quant not in filtered_data.columns:
+                        continue
 
-                alpha = (
-                    min(
-                        (
-                            quantiles.index(quant),
-                            len(quantiles) - quantiles.index(quant),
+                    alpha = (
+                        min(
+                            (
+                                quantiles.index(quant),
+                                len(quantiles) - quantiles.index(quant),
+                            )
                         )
+                        / (len(quantiles) / 2)
+                        * max_alpha
                     )
-                    / (len(quantiles) / 2)
-                    * max_alpha
-                )
-                fill_color = f"rgba({rgb_color[0]}, {rgb_color[1]}, {rgb_color[2]}, {alpha})"  # Use rgba with appropriate alpha
+                    fill_color = f"rgba({rgb_color[0]}, {rgb_color[1]}, {rgb_color[2]}, {alpha})"  # Use rgba with appropriate alpha
 
-                fig.add_trace(
-                    go.Scatter(
-                        x=filtered_data.index,
-                        y=filtered_data[quant],
-                        fill="tonexty",
-                        fillcolor=fill_color,
-                        mode="lines",
-                        line={"width": 0},
-                        name=(
-                            display_name if quant == 0.5 and show_legend else None
-                        ),  # Show legend only for the first figure
-                        showlegend=quant == 0.5
-                        and show_legend,  # Show legend only for the first figure
-                        legendgroup=display_name,
-                    ),
-                    row=row,
-                    col=col,
-                )
+                    fig.add_trace(
+                        go.Scatter(
+                            x=filtered_data.index,
+                            y=filtered_data[quant],
+                            fill="tonexty",
+                            fillcolor=fill_color,
+                            mode="lines",
+                            line={"width": 0},
+                            name=(
+                                display_name if quant == 0.5 and show_legend else None
+                            ),  # Show legend only for the first figure
+                            showlegend=quant == 0.5
+                            and show_legend,  # Show legend only for the first figure
+                            legendgroup=display_name,
+                        ),
+                        row=row,
+                        col=col,
+                    )
 
             # Plot the median line
             if 0.5 in filtered_data.columns:
+                show_median_legend = show_legend and not show_ranges
                 fig.add_trace(
                     go.Scatter(
                         x=filtered_data.index,
@@ -190,9 +285,10 @@ def plot_scenario_output_ranges(
                             "color": f"rgb({rgb_color[0]}, {rgb_color[1]}, {rgb_color[2]})"
                         },
                         name=(
-                            display_name if show_legend else None
+                            display_name if show_median_legend else None
                         ),  # Show legend only for the first figure
-                        showlegend=False,
+                        showlegend=show_median_legend,
+                        legendgroup=display_name,
                     ),
                     row=row,
                     col=col,
@@ -238,13 +334,13 @@ def plot_scenario_output_ranges(
         title="",
         xaxis_title="",
         yaxis_title="",
-        showlegend=True,
+        showlegend=showlegend,
         margin=dict(l=50, r=50, t=50, b=bottom_margin),  # Dynamic bottom margin
         legend=dict(
             title="",
             orientation="h",
             yanchor="top",
-            y=-0.2,  # Position relative to bottom margin
+            y=-0.25,  # Position relative to bottom margin
             xanchor="center",
             x=0.5,
             font=dict(size=10),
