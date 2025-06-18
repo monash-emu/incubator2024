@@ -69,7 +69,8 @@ def request_model_outputs(
     # notification
     # Get the treatment flow
     model.request_output_for_flow("treatment_commencement", "treatment_commencement")
-    
+    model.request_output_for_flow("acf_notification", "acf_detection")
+
     prop_reported_case = get_linear_interpolation_function(
         [2017.0,2023.0],
         [Parameter("initial_notif_rate"), Parameter("latest_notif_rate")]
@@ -77,7 +78,7 @@ def request_model_outputs(
 
     tracked_prop_reported_case = model.request_track_modelled_value("notif_ratio", prop_reported_case)
 
-    notifs = model.request_function_output("notification", DerivedOutput("treatment_commencement") * tracked_prop_reported_case)
+    notifs = model.request_function_output("notification", (DerivedOutput("treatment_commencement") * tracked_prop_reported_case) + DerivedOutput("acf_notification"))
     #notifs = model.request_output_for_flow("notification", "treatment_commencement")
 
     model.request_function_output("notification_log", np.log(notifs))

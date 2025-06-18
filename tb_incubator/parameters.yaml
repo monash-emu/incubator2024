@@ -34,8 +34,7 @@ descriptions:
   smear_negative_self_recovery: "Self-recovery rate for smear-negative and extrapulmonary TB"
   initial_notif_rate: "Initial proportion of TB patients that started treatment that are reported in official surveillance data"
   latest_notif_rate: "Latest proportion of TB patients that started treatment that are reported in official surveillance data"
-  #notif_start_time: "Timepoint when case detection begins to increase"
-  #mid_notif_rate: ""
+  acf_sensitivity: "Sensitivity for active case finding (ACF) programme"
 value:
   start_population_size: 1.0
   age_infectiousness_switch: 15.0
@@ -87,8 +86,7 @@ value:
   smear_negative_self_recovery: 0.130
   initial_notif_rate: 0.1
   latest_notif_rate: 0.8
-  #notif_start_time: 1975.0
-  #mid_notif_rate: 0.4
+  acf_sensitivity: 0.8
 unit:
   start_population_size: "person"
   age_infectiousness_switch: "years old"
@@ -125,8 +123,7 @@ unit:
   smear_negative_self_recovery: ""
   initial_notif_rate: ""
   latest_notif_rate: ""
-  #notif_start_time: ""
-  #mid_notif_rate: ""
+  acf_sensitivity: ""
 sources:
   start_population_size: "A value to avoid dividing by zero in the force of infection calculation"
   age_infectiousness_switch: "Set based on duration of BCG protection [@nguipdop2016, @roy2019]"
@@ -160,6 +157,5 @@ sources:
   smear_negative_self_recovery: ""
   initial_notif_rate: ""
   latest_notif_rate: ""
-  #notif_start_time: ""
-  #mid_notif_rate: ""
+  acf_sensitivity: "Fitted"
   

@@ -4,23 +4,28 @@ import plotly.express as px
 import plotly.graph_objects as go
 import numpy as np
 import pandas as pd
-from typing import List, Dict
+from typing import List, Dict, Optional
 from pandas import DataFrame, Series
 from plotly.subplots import make_subplots
 import tb_incubator.constants as const
 from tb_incubator.utils import get_row_col_for_subplots
+import re
+from plotly.colors import hex_to_rgb
 
-scenario_names = const.scenario_names
+scenario_names = const.SCENARIO_NAMES
 quantiles = const.QUANTILES
-indicator_names = const.indicator_names
+indicator_names = const.INDICATOR_NAMES
 
 def plot_indicator_vs_indicator(
     scenario_outputs: Dict[str, Dict[str, pd.DataFrame]],
     indicators: List[str],
-    year_range: List[int] = [2023],
+    year_range: List[int] = [2025, 2035],
     quantile: float = 0.5,
     showlegend: bool = True,
     plot_trajectory: bool = False,
+    palette: str = "viridis",
+    marker_styles: Optional[Dict[str, str]] = None,
+    color_styles: Optional[Dict[str, str]] = None,
 ) -> go.Figure:
     """
     Plot indicator_y vs indicator_x for each scenario at selected years.
@@ -36,8 +41,9 @@ def plot_indicator_vs_indicator(
         Plotly figure.
     """
     fig = go.Figure()
-
-    scenario_colors = px.colors.qualitative.Dark2
+    scenario_colors = (
+        get_enhanced_color_palettes().get(palette)
+    )  # Use Plotly colors for other scenarios
 
     for scenario_idx, (scenario_name, quantile_outputs) in enumerate(scenario_outputs.items()):
         display_name = scenario_names.get(scenario_name, scenario_name)
@@ -47,6 +53,8 @@ def plot_indicator_vs_indicator(
         y_data = quantile_outputs[indicators[-1]]
 
         legend_added = False
+        line_color = get_line_color_style(scenario_name, color_styles or {}, scenario_colors, scenario_idx)
+        marker_style = get_marker_style(scenario_name, marker_styles or {})
 
         # Plot each year as a point, or entire trajectory if year_range is a range
         for year in year_range:
@@ -56,11 +64,12 @@ def plot_indicator_vs_indicator(
                         x=[x_data.loc[year, quantile]],
                         y=[y_data.loc[year, quantile]],
                         mode='markers+text',
-                        text=[str(year)],
-                        textposition='top center',
+                        #text=[str(year)],
+                        #textposition='top center',
                         marker=dict(
                             size=8,
-                            color=scenario_colors[scenario_idx % len(scenario_colors)],
+                            color=line_color,
+                            symbol=marker_style
                         ),
                         name=display_name if not legend_added else None,  # Legend only for first point
                         showlegend=showlegend and not legend_added,
@@ -87,6 +96,7 @@ def plot_indicator_vs_indicator(
 
         fig.update_layout(
             #title=f"{indicators[0]} vs {indicators[-1]}",
+            title=f"{', '.join(map(str, year_range))}",
             xaxis_title=indicator_names.get(indicators[0], indicators[0]),
             yaxis_title=indicator_names.get(indicators[-1], indicators[-1]),
             legend=dict(
@@ -102,8 +112,6 @@ def plot_indicator_vs_indicator(
         )
 
     return fig
-
-
 
 def get_combined_plot(
     plot_list: List[go.Figure],
@@ -169,9 +177,12 @@ def plot_scenario_output_ranges(
     n_cols: int,
     plot_start_date: int = 1800,
     plot_end_date: int = 2023,
-    max_alpha: float = 0.7,
+    max_alpha: float = 0.2,
     showlegend: bool = True,
     show_ranges: bool = True,
+    palette: str = "scientific_rainbow",
+    dash_styles: Optional[Dict[str, str]] = None,
+    color_styles: Optional[Dict[str, str]] = None,
 ) -> go.Figure:
     """
     Plot the credible intervals for each indicator in a single plot across multiple scenarios.
@@ -203,10 +214,10 @@ def plot_scenario_output_ranges(
     for annotation in fig['layout']['annotations']:
         annotation['font'] = dict(size=12)  # Set font size for titles
 
-    base_color = (0, 30, 180)  # Base scenario RGB color as a tuple
+    base_color = (54, 54, 54)  # Base scenario RGB color as a tuple
     target_color = "black"  # Use a consistent color for 2035 target points
     scenario_colors = (
-        px.colors.qualitative.Dark2
+        get_enhanced_color_palettes().get(palette)
     )  # Use Plotly colors for other scenarios
 
     for i, ind in enumerate(indicators):
@@ -222,10 +233,11 @@ def plot_scenario_output_ranges(
             if (
                 scenario_name.lower() == "base_scenario"
             ):  # Check if it's the base scenario
-                rgb_color = base_color
+                line_color = f"rgb({base_color[0]}, {base_color[1]}, {base_color[2]})"
             else:
-                hex_color = scenario_colors[scenario_idx % len(scenario_colors)]
-                rgb_color = color_to_rgb(hex_color)  # Convert hex to RGB tuple
+                line_color = get_line_color_style(scenario_name, color_styles or {}, scenario_colors, scenario_idx)
+            
+            line_dash = get_line_dash_style(scenario_name, dash_styles or {})
 
             data = quantile_outputs[ind]
 
@@ -238,6 +250,14 @@ def plot_scenario_output_ranges(
             show_legend = i == 0
 
             if show_ranges:
+                base_color_str = get_line_color_style(
+                    scenario_name,
+                    color_styles or {},
+                    scenario_colors,
+                    scenario_idx
+                )
+                base_rgb = convert_color_to_rgb_tuple(base_color_str)
+
                 for q, quant in enumerate(quantiles):
                     if quant not in filtered_data.columns:
                         continue
@@ -252,7 +272,7 @@ def plot_scenario_output_ranges(
                         / (len(quantiles) / 2)
                         * max_alpha
                     )
-                    fill_color = f"rgba({rgb_color[0]}, {rgb_color[1]}, {rgb_color[2]}, {alpha})"  # Use rgba with appropriate alpha
+                    fill_color = f"rgba({base_rgb[0]}, {base_rgb[1]}, {base_rgb[2]}, {alpha})"  # Use rgba with appropriate alpha
 
                     fig.add_trace(
                         go.Scatter(
@@ -262,12 +282,8 @@ def plot_scenario_output_ranges(
                             fillcolor=fill_color,
                             mode="lines",
                             line={"width": 0},
-                            name=(
-                                display_name if quant == 0.5 and show_legend else None
-                            ),  # Show legend only for the first figure
-                            showlegend=quant == 0.5
-                            and show_legend,  # Show legend only for the first figure
-                            legendgroup=display_name,
+                            name=None,
+                            showlegend=False,
                         ),
                         row=row,
                         col=col,
@@ -275,14 +291,15 @@ def plot_scenario_output_ranges(
 
             # Plot the median line
             if 0.5 in filtered_data.columns:
-                show_median_legend = show_legend and not show_ranges
+                show_median_legend = show_legend
                 fig.add_trace(
                     go.Scatter(
                         x=filtered_data.index,
                         y=filtered_data[0.5],
                         mode="markers+lines",
                         line={
-                            "color": f"rgb({rgb_color[0]}, {rgb_color[1]}, {rgb_color[2]})"
+                            "color": line_color,
+                            "dash": line_dash,
                         },
                         name=(
                             display_name if show_median_legend else None
@@ -328,18 +345,18 @@ def plot_scenario_output_ranges(
     # Calculate dynamic margin based on number of legend entries
     legend_items = len([s for s in scenario_outputs.keys()])
     legend_rows = np.ceil(legend_items / 3)  # Assume roughly 3 items per row
-    bottom_margin = max(80, 40 + 25 * legend_rows)  # Base margin + extra per row
+    #bottom_margin = max(80, 40 + 25 * legend_rows)  # Base margin + extra per row
 
     fig.update_layout(
         title="",
         xaxis_title="",
         yaxis_title="",
         showlegend=showlegend,
-        margin=dict(l=50, r=50, t=50, b=bottom_margin),  # Dynamic bottom margin
+        margin=dict(l=50, r=50, t=50, b=0),  # Dynamic bottom margin
         legend=dict(
             title="",
             orientation="h",
-            yanchor="top",
+            yanchor="bottom",
             y=-0.25,  # Position relative to bottom margin
             xanchor="center",
             x=0.5,
@@ -360,7 +377,7 @@ def plot_scenario_output_ranges_by_col(
     scenario_outputs: Dict[str, Dict[str, pd.DataFrame]],
     plot_start_date: float = 2025.0,
     plot_end_date: float = 2036.0,
-    max_alpha: float = 0.7,
+    max_alpha: float = 0.3,
 ) -> go.Figure:
     """
     Plot the credible intervals for incidence and mortality_raw with scenarios as rows.
@@ -836,3 +853,150 @@ def display_plot(plot, plot_name, image_format='svg', image_width: int = None, i
     else:
         from IPython.display import Image
         display(Image(image_path / f"{plot_name}.{image_format}"))
+
+def get_enhanced_color_palettes():
+    """Multiple enhanced color palettes for better distinction"""
+    return {
+        # Option 1: Widely-spaced Viridis (every 2nd color)
+        "viridis_spaced": [
+            'rgb(68, 1, 84)',      # Dark purple
+            'rgb(49, 104, 142)',   # Blue  
+            'rgb(31, 158, 137)',   # Teal
+            'rgb(109, 205, 89)',   # Green
+            'rgb(253, 231, 37)',   # Yellow
+        ],
+        
+        # Option 2: Scientific rainbow (highly distinguishable)
+        "scientific_rainbow": [
+            'rgb(68, 1, 84)',      # Purple (Viridis start)
+            'rgb(31, 120, 180)',   # Blue
+            'rgb(51, 160, 44)',    # Green  
+            'rgb(255, 127, 0)',    # Orange
+            'rgb(227, 26, 28)',    # Red
+            'rgb(253, 191, 111)',  # Light orange
+            'rgb(255, 255, 51)',   # Yellow
+            'rgb(166, 206, 227)',  # Light blue
+            'rgb(178, 223, 138)',  # Light green
+        ],
+        
+        # Option 3: Plasma-inspired (high contrast)
+        "plasma_enhanced": [
+            'rgb(13, 8, 135)',     # Dark blue
+            'rgb(84, 2, 163)',     # Purple
+            'rgb(139, 10, 165)',   # Magenta
+            'rgb(185, 50, 137)',   # Pink
+            'rgb(219, 92, 104)',   # Red-pink
+            'rgb(244, 136, 73)',   # Orange
+            'rgb(254, 188, 43)',   # Yellow-orange
+            'rgb(240, 249, 33)',   # Yellow
+        ],
+        
+        # Option 4: ColorBrewer Set1 (maximum distinction)
+        "colorbrewer_set1": [
+            'rgb(228, 26, 28)',    # Red
+            'rgb(55, 126, 184)',   # Blue  
+            'rgb(77, 175, 74)',    # Green
+            'rgb(152, 78, 163)',   # Purple
+            'rgb(255, 127, 0)',    # Orange
+            'rgb(255, 255, 51)',   # Yellow
+            'rgb(166, 86, 40)',    # Brown
+            'rgb(247, 129, 191)',  # Pink
+            'rgb(153, 153, 153)',  # Gray
+        ],
+        
+        # Option 5: Custom gradient (Viridis-inspired but more spaced)
+        "custom_gradient": [
+            'rgb(72, 12, 168)',    # Purple
+            'rgb(67, 62, 133)',    # Blue-purple
+            'rgb(52, 94, 141)',    # Blue
+            'rgb(47, 127, 142)',   # Teal-blue
+            'rgb(56, 166, 165)',   # Teal
+            'rgb(92, 200, 99)',    # Green
+            'rgb(170, 220, 50)',   # Yellow-green
+            'rgb(243, 229, 0)',    # Yellow
+        ],
+        
+        # Option 6: Turbo colormap (Google's improved rainbow)
+        "turbo": [
+            'rgb(48, 18, 59)',     # Dark purple
+            'rgb(62, 73, 137)',    # Blue
+            'rgb(33, 144, 140)',   # Cyan
+            'rgb(93, 201, 99)',    # Green
+            'rgb(186, 222, 40)',   # Yellow-green
+            'rgb(253, 231, 37)',   # Yellow
+            'rgb(244, 109, 67)',   # Orange
+            'rgb(165, 15, 21)',    # Red
+        ],
+        
+        # Option 7: Cividis (colorblind-optimized)
+        "cividis": [
+            'rgb(0, 32, 76)',      # Dark blue
+            'rgb(31, 70, 112)',    # Blue
+            'rgb(71, 107, 142)',   # Light blue
+            'rgb(114, 142, 168)',  # Gray-blue
+            'rgb(158, 175, 190)',  # Gray
+            'rgb(200, 206, 195)',  # Light gray
+            'rgb(239, 230, 69)',   # Yellow
+        ],
+        
+        # Option 8: High contrast pairs (for few scenarios)
+        "high_contrast": [
+            'rgb(68, 1, 84)',      # Purple
+            'rgb(253, 231, 37)',   # Yellow
+            'rgb(31, 120, 180)',   # Blue
+            'rgb(227, 26, 28)',    # Red
+            'rgb(51, 160, 44)',    # Green
+            'rgb(255, 127, 0)',    # Orange
+        ],
+
+        # Option 9: Simple Viridis
+        "viridis": [
+            'rgb(68, 1, 84)', # Dark purple
+            'rgb(72, 40, 120)', # Purple
+            'rgb(62, 73, 137)', # Blue-purple
+            'rgb(49, 104, 142)', # Blue
+            'rgb(38, 130, 142)', # Teal-blue
+            'rgb(31, 158, 137)', # Teal
+            'rgb(53, 183, 121)', # Green-teal
+            'rgb(109, 205, 89)', # Green
+            'rgb(180, 222, 44)', # Yellow-green
+            'rgb(253, 231, 37)', # Yellow
+            'rgb(244, 109, 67)', # Orange (extra)
+            'rgb(215, 48, 39)', # Red (extra)
+            'rgb(165, 15, 21)', # Dark red (extra)
+            'rgb(128, 0, 38)', # Very dark red (extra)
+            'rgb(77, 0, 75)', # Dark purple (extra)
+        ]
+    }
+
+def get_line_dash_style(scenario_name: str, style_map: Dict[str, str]) -> str:
+    for pattern, dash_style in style_map.items():
+        if pattern in scenario_name:
+            return dash_style
+    return "solid"  # Default if no pattern matches
+
+def get_marker_style(scenario_name: str, style_map: Dict[str, str]) -> str:
+    for pattern, marker_style in style_map.items():
+        if pattern in scenario_name:
+            return marker_style
+    return "circle"  # Default if no pattern matches
+
+def get_line_color_style(scenario_name: str, style_map: Dict[str, str], fallback_palette: List[str], scenario_idx: int) -> str:
+    if style_map:
+        for pattern, color_style in style_map.items():
+            if pattern in scenario_name:
+                return color_style  # expected to be a hex or rgb string
+    return fallback_palette[scenario_idx % len(fallback_palette)]
+
+def convert_color_to_rgb_tuple(color_str):
+    """Convert a hex or rgb string to an RGB tuple."""
+    if color_str.startswith("rgb("):
+        return tuple(map(int, re.findall(r"\d+", color_str)))
+    elif color_str.startswith("#"):
+        return hex_to_rgb(color_str)
+    else:
+        try:
+            return hex_to_rgb(color_str)  # handles named colors if defined
+        except ValueError:
+            return (0, 0, 0)  # fallback to black
+

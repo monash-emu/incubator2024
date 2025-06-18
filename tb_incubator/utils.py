@@ -1,9 +1,20 @@
 from jax import numpy as jnp
 from math import log, exp
-from typing import Dict
+from typing import Dict, List
 import numpy as np
 import pandas as pd
-from summer2.functions.time import get_linear_interpolation_function
+
+def create_periodic_time_series(baseline_year, rate, frequency, baseline_rate=0.0):
+    time_series = {}
+    baseline_year = baseline_year
+    while baseline_year < 2050:
+        time_series[baseline_year] = baseline_rate
+        time_series[baseline_year + 0.01] = rate
+        time_series[baseline_year + 1.0] = rate
+        time_series[baseline_year + 1.01] = baseline_rate
+        baseline_year += frequency
+
+    return time_series
 
 def calculate_proportional_reduction(
     scenario_outputs: Dict[str, Dict[str, pd.DataFrame]],

@@ -1,15 +1,15 @@
 import numpy as np
 import pandas as pd
-from typing import List, Dict, Any
+from typing import List, Dict
 from matplotlib import pyplot as plt
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 
-from tb_incubator.utils import round_sigfig, get_target_from_name, get_row_col_for_subplots
+from tb_incubator.utils import round_sigfig, get_target_from_name, get_row_col_for_subplots, create_periodic_time_series
 from tb_incubator.model import build_model
 from tb_incubator.input import load_targets, load_param_info
 from tb_incubator.plotting import get_standard_subplot_fig
-from tb_incubator.constants import indicator_names, QUANTILES
+from tb_incubator.constants import INDICATOR_NAMES, QUANTILES
 
 from estival import targets as est
 from estival import priors as esp
@@ -26,6 +26,8 @@ def get_bcm(
     covid_effects: Dict[str, bool] = None,
     xpert_util_target: float = None,
     improved_detection_multiplier: float = None,
+    acf_screening_rate: Dict[float, float] = None,
+    acf_sensitivity: float = None,
 ) -> BayesianCompartmentalModel:
     """
     Constructs and returns a Bayesian Compartmental Model.
@@ -48,7 +50,10 @@ def get_bcm(
                               xpert_improvement=xpert_improvement, 
                               covid_effects=covid_effects,
                               xpert_util_target= xpert_util_target,
-                              improved_detection_multiplier= improved_detection_multiplier)
+                              improved_detection_multiplier= improved_detection_multiplier,
+                              acf_screening_rate=acf_screening_rate,
+                              acf_sensitivity=acf_sensitivity,
+                )
     priors = get_all_priors(xpert_improvement=xpert_improvement, covid_effects=covid_effects)
     targets = get_targets()
     
@@ -77,7 +82,7 @@ def get_all_priors(xpert_improvement = True, covid_effects: Dict[str, bool] = No
         esp.UniformPrior("base_diagnostic_capacity", (0.1, 0.90)),
         esp.UniformPrior("initial_notif_rate", (0.1, 0.90)),
         esp.UniformPrior("latest_notif_rate", (0.1, 0.90)),
-        #esp.UniformPrior("mid_notif_rate", (0.1, 0.90)),
+        #esp.UniformPrior("acf_sensitivity", (0.6, 0.99)),
         esp.BetaPrior.from_mean_and_ci("incidence_props_smear_positive_among_pulmonary", 0.65, (0.4, 0.90)),
         #esp.UniformPrior("progression_multiplier", (1.0,  2.0)),
         #esp.UniformPrior("rr_infection_latent", (0.1, 0.50)),
@@ -684,6 +689,124 @@ def tabulate_calib_results(
     ]
     return table
 
+def calculate_combined_xpert_acf_scenario_outputs(
+    params: Dict[str, float],
+    idata_extract: az.InferenceData,
+    indicators: List[str] = ['incidence', 'prevalence', 'notification', 'mortality', 'treatment_commencement', 'diagnostic_capacity'],
+    xpert_target_list: List[float] = [0.90, 0.80, 0.70],
+    acf_rate_configs: Dict[str, Dict[float, float]] = None,
+    covid_effects: Dict[str, bool] = None,
+) -> Dict[str, Dict[str, pd.DataFrame]]:
+    """
+    Calculate the model results for each ACF scenario and return the baseline and scenario outputs.
+    
+    Args:
+        params: Dictionary containing model parameters.
+        idata_extract: InferenceData object containing the model data.
+        indicators: List of indicators to return for scenarios.
+        acf_rate_configs: Dictionary mapping scenario names to time series rate configurations.
+        frequency: List of frequencies (in years) for periodic ACF implementation.
+        covid_effects: Dictionary of COVID effect flags.
+        baseline_year: Year to use as baseline for periodic time series.
+        acf_rate: Fixed rate to use for periodic ACF scenarios.
+        
+    Returns:
+        Dictionary containing results for the baseline and each scenario.
+    """
+    if covid_effects is None:
+        covid_effects = {
+            "detection_reduction": False
+        }
+
+    # Base scenario (calculate outputs for all indicators)
+    base_quantiles = calculate_base_scenario(params, idata_extract, covid_effects)
+
+    # Store results for the baseline scenario
+    scenario_outputs = {"base_scenario": base_quantiles}
+
+    # Calculate quantiles for each improvement in detection scenario
+    for xpert_target in xpert_target_list:
+        for scenario_name, time_series_rates in acf_rate_configs.items():
+            # Convert time series to appropriate format for your model
+            bcm = get_bcm(params, xpert_improvement=True, covid_effects=covid_effects, xpert_util_target=xpert_target, 
+                         acf_screening_rate=time_series_rates)
+            scenario_result = esamp.model_results_for_samples(idata_extract, bcm).results
+            scenario_quantiles = esamp.quantiles_for_results(scenario_result, QUANTILES)
+            
+            # Create a scenario key combining both factors
+            scenario_key = (
+                f"increase_xpert_util_target_by_{xpert_target}".replace(".", "_")
+                + f"_and_implement_{scenario_name}".replace(".", "_")
+            )  
+
+            # Store the results for this combined scenario
+            scenario_outputs[scenario_key] = scenario_quantiles
+
+    return process_scenario_results(scenario_outputs, indicators)
+
+def calculate_acf_scenario_outputs(
+    params: Dict[str, float],
+    idata_extract: az.InferenceData,
+    indicators: List[str] = ['incidence', 'prevalence', 'notification', 'mortality', 'treatment_commencement', 'diagnostic_capacity'],
+    acf_rate_configs: Dict[str, Dict[float, float]] = None,
+    frequency: List[float] = [2.0, 3.0, 4.0],
+    covid_effects: Dict[str, bool] = None,
+    baseline_year: float = 2025.0,
+    acf_rate: float = 0.2,
+) -> Dict[str, Dict[str, pd.DataFrame]]:
+    """
+    Calculate the model results for each ACF scenario and return the baseline and scenario outputs.
+    
+    Args:
+        params: Dictionary containing model parameters.
+        idata_extract: InferenceData object containing the model data.
+        indicators: List of indicators to return for scenarios.
+        acf_rate_configs: Dictionary mapping scenario names to time series rate configurations.
+        frequency: List of frequencies (in years) for periodic ACF implementation.
+        covid_effects: Dictionary of COVID effect flags.
+        baseline_year: Year to use as baseline for periodic time series.
+        acf_rate: Fixed rate to use for periodic ACF scenarios.
+        
+    Returns:
+        Dictionary containing results for the baseline and each scenario.
+    """
+    if covid_effects is None:
+        covid_effects = {
+            "detection_reduction": False
+        }
+
+    # Base scenario (calculate outputs for all indicators)
+    base_quantiles = calculate_base_scenario(params, idata_extract, covid_effects)
+
+    # Store results for the baseline scenario
+    scenario_outputs = {"base_scenario": base_quantiles}
+
+    # Calculate quantiles for each improvement in detection scenario
+    if acf_rate_configs is not None:
+        for scenario_name, time_series_rates in acf_rate_configs.items():
+            # Convert time series to appropriate format for your model
+            bcm = get_bcm(params, xpert_improvement=True, covid_effects=covid_effects, 
+                         acf_screening_rate=time_series_rates)
+            scenario_result = esamp.model_results_for_samples(idata_extract, bcm).results
+            scenario_quantiles = esamp.quantiles_for_results(scenario_result, QUANTILES)
+
+            # Store the results for this scenario
+            scenario_outputs[scenario_name] = scenario_quantiles
+    
+    if frequency is not None:
+        for freq in frequency:
+            periodic_acf = create_periodic_time_series(baseline_year, acf_rate, freq)
+            bcm = get_bcm(params, xpert_improvement=True, covid_effects=covid_effects, 
+                          acf_screening_rate=periodic_acf)
+            scenario_result = esamp.model_results_for_samples(idata_extract, bcm).results
+            scenario_quantiles = esamp.quantiles_for_results(scenario_result, QUANTILES)
+
+            # Store the results for this scenario
+            scenario_key = f"implement_acf_every_{int(freq)}_years".replace(".", "_")
+            scenario_outputs[scenario_key] = scenario_quantiles
+
+    return process_scenario_results(scenario_outputs, indicators)
+    
 def calculate_xpert_scenario_outputs(
     params: Dict[str, float],
     idata_extract: az.InferenceData,
@@ -710,9 +833,7 @@ def calculate_xpert_scenario_outputs(
         }
 
     # Base scenario (calculate outputs for all indicators)
-    bcm = get_bcm(params, xpert_improvement=True, covid_effects=covid_effects)
-    base_results = esamp.model_results_for_samples(idata_extract, bcm).results
-    base_quantiles = esamp.quantiles_for_results(base_results, QUANTILES)
+    base_quantiles = calculate_base_scenario(params, idata_extract, covid_effects)
 
     # Store results for the baseline scenario
     scenario_outputs = {"base_scenario": base_quantiles}
@@ -727,19 +848,14 @@ def calculate_xpert_scenario_outputs(
         scenario_key = f"increase_xpert_util_target_by_{xpert_target}".replace(".", "_")
         scenario_outputs[scenario_key] = scenario_quantiles
 
-    # Extract only the relevant indicators for each scenario
-    for scenario_key in scenario_outputs:
-        if scenario_key != "base_scenario":
-            scenario_outputs[scenario_key] = scenario_outputs[scenario_key][indicators]
-
-    return scenario_outputs
+    return process_scenario_results(scenario_outputs, indicators)
 
 
 def calculate_detection_scenario_outputs(
     params: Dict[str, float],
     idata_extract: az.InferenceData,
     indicators: List[str] = ['incidence', 'prevalence', 'notification', 'mortality', 'treatment_commencement', 'diagnostic_capacity'],
-    detection_multiplier_list: List[float] = [2.0, 5.0, 10.0],
+    detection_multiplier_list: List[float] = [2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0],
     covid_effects: Dict[str, bool] = None,
 ) -> Dict[str, Dict[str, pd.DataFrame]]:
     """
@@ -761,9 +877,7 @@ def calculate_detection_scenario_outputs(
         }
 
     # Base scenario (calculate outputs for all indicators)
-    bcm = get_bcm(params, xpert_improvement=True, covid_effects=covid_effects)
-    base_results = esamp.model_results_for_samples(idata_extract, bcm).results
-    base_quantiles = esamp.quantiles_for_results(base_results, QUANTILES)
+    base_quantiles = calculate_base_scenario(params, idata_extract, covid_effects)
 
     # Store results for the baseline scenario
     scenario_outputs = {"base_scenario": base_quantiles}
@@ -778,12 +892,7 @@ def calculate_detection_scenario_outputs(
         scenario_key = f"increase_case_detection_by_{multiplier}".replace(".", "_")
         scenario_outputs[scenario_key] = scenario_quantiles
 
-    # Extract only the relevant indicators for each scenario
-    for scenario_key in scenario_outputs:
-        if scenario_key != "base_scenario":
-            scenario_outputs[scenario_key] = scenario_outputs[scenario_key][indicators]
-
-    return scenario_outputs
+    return process_scenario_results(scenario_outputs, indicators)
 
 def calculate_combined_detection_xpert_outputs(
     params: Dict[str, float],
@@ -813,9 +922,7 @@ def calculate_combined_detection_xpert_outputs(
         }
 
     # Base scenario (calculate outputs for all indicators)
-    bcm = get_bcm(params, xpert_improvement=True, covid_effects=covid_effects)
-    base_results = esamp.model_results_for_samples(idata_extract, bcm).results
-    base_quantiles = esamp.quantiles_for_results(base_results, QUANTILES)
+    base_quantiles = calculate_base_scenario(params, idata_extract, covid_effects)
 
     # Store results for the baseline scenario
     scenario_outputs = {"base_scenario": base_quantiles}
@@ -843,11 +950,22 @@ def calculate_combined_detection_xpert_outputs(
             # Store the results for this combined scenario
             scenario_outputs[scenario_key] = scenario_quantiles
 
-    # Extract only the relevant indicators for each scenario
+    return process_scenario_results(scenario_outputs, indicators)
+
+def process_scenario_results(scenario_outputs, indicators):
     for scenario_key in scenario_outputs:
         if scenario_key != "base_scenario":
             scenario_outputs[scenario_key] = scenario_outputs[scenario_key][indicators]
-
     return scenario_outputs
 
+def calculate_base_scenario(
+    params: Dict[str, float],
+    idata_extract: az.InferenceData,
+    covid_effects: Dict[str, bool] = None,
+):
+    # Base scenario (calculate outputs for all indicators)
+    bcm = get_bcm(params, xpert_improvement=True, covid_effects=covid_effects)
+    base_results = esamp.model_results_for_samples(idata_extract, bcm).results
+    base_quantiles = esamp.quantiles_for_results(base_results, QUANTILES)
 
+    return base_quantiles

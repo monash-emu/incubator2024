@@ -79,6 +79,7 @@ def get_detection_func(
 
     return detection_func, base_detection, diagnostic_capacity, diagnostic_improvement
 
+
 def apply_future_detection_improvement(
     detection_func: Function, 
     improved_detection_multiplier: float
@@ -185,3 +186,4 @@ def apply_covid_effects(
     )
 
     return detection_func * covid_impact_func
+

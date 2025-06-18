@@ -1,6 +1,7 @@
 from typing import Dict
 from summer2 import CompartmentalModel
 from summer2.parameters import Parameter, Time, Function
+from summer2.functions.time import get_linear_interpolation_function
 from .input import get_population_entry_rate, load_param_info
 import tb_incubator.constants as const
 from .utils import triangle_wave_func
@@ -24,7 +25,9 @@ def build_model(
     xpert_improvement: bool = True,
     covid_effects: Dict[str, bool] = None,
     xpert_util_target: float = None,
-    improved_detection_multiplier: float = None
+    improved_detection_multiplier: float = None,
+    acf_screening_rate: Dict[float, float] = None,
+    acf_sensitivity: float = None,
 ) -> CompartmentalModel:
     """
     Builds and returns a compartmental model for epidemiological studies, incorporating
@@ -112,6 +115,14 @@ def build_model(
     # Detection and treatment commencement
     model.add_transition_flow("treatment_commencement", 1.0, "infectious", "recovered")
 
+    # Add ACF detection flow (will be adjusted later)
+    if acf_screening_rate is not None:
+        acf_detection_rate = calculate_acf_detection_rate(acf_screening_rate, acf_sensitivity)
+        model.add_transition_flow("acf_detection", acf_detection_rate, "infectious", "recovered")
+    else:
+        model.add_transition_flow("acf_detection", 0.0, "infectious", "recovered")
+
+
     # Age-stratification
     strat = get_age_strat(params)
     model.stratify_with(strat)
@@ -155,6 +166,25 @@ def build_model(
 
     return model, final_desc
 
+
+def calculate_acf_detection_rate(
+    acf_screening_rate: Dict[float, float],
+    acf_sensitivity: float = None, 
+):
+    times = list(acf_screening_rate.keys())
+    
+    if acf_sensitivity is None:
+        sensitivity = Parameter("acf_sensitivity")
+    else:
+        sensitivity = acf_sensitivity
+    
+    acf_rate_vals = [
+        screening_rate * sensitivity
+        for screening_rate in acf_screening_rate.values()
+    ]
+    
+    acf_detection_rate = get_linear_interpolation_function(times, acf_rate_vals)
+    return acf_detection_rate
 
 # Add latency structures
 def add_latency_flow(model):
@@ -215,3 +245,4 @@ def seed_infectious(model: CompartmentalModel):
         "infectious",
         split_imports=True,
     )
+
