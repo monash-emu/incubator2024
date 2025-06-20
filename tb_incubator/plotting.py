@@ -16,6 +16,102 @@ scenario_names = const.SCENARIO_NAMES
 quantiles = const.QUANTILES
 indicator_names = const.INDICATOR_NAMES
 
+def extract_xpert_from_name(name: str) -> Optional[float]:
+    match = re.search(r'xpert_util_target_by_([0-9_]+?)(?:_and_|$)', name)
+    if match:
+        try:
+            return float(match.group(1).replace('_', '.'))
+        except ValueError:
+            return None
+    return None
+
+def extract_acf_from_name(name: str) -> int:
+    match = re.search(r'implement_acf_([0-9]+)', name)
+    if match:
+        return int(match.group(1))
+    return None
+
+def plot_indicator_vs_indicator_subplots(
+    scenario_outputs: Dict[str, Dict[str, pd.DataFrame]],
+    indicators: List[str],
+    year_range: List[int] = [2030],
+    quantile: float = 0.5,
+    marker_styles: Optional[Dict[str, str]] = None,
+    color_styles: Optional[Dict[str, str]] = None,
+) -> go.Figure:
+
+    xpert_levels = sorted(set(extract_xpert_from_name(s) for s in scenario_outputs if extract_xpert_from_name(s) is not None))
+    num_cols = len(xpert_levels)
+
+    fig = make_subplots(
+        rows=1,
+        cols=num_cols,
+        shared_yaxes=True,
+        shared_xaxes=True,
+        subplot_titles=[f"Xpert Util: {int(x*100)}%" for x in xpert_levels]
+    )
+
+    scenario_colors = get_enhanced_color_palettes().get("viridis")
+    acf_color_map = {}  # to assign consistent colors to ACF levels
+
+    for scenario_idx, (scenario_name, quantile_outputs) in enumerate(scenario_outputs.items()):
+        xpert = extract_xpert_from_name(scenario_name)
+        acf = extract_acf_from_name(scenario_name)
+
+        if xpert is None or acf is None:
+            continue
+
+        col = xpert_levels.index(xpert) + 1
+        display_name = scenario_names.get(scenario_name, scenario_name)
+
+        x_data = quantile_outputs[indicators[0]]
+        y_data = quantile_outputs[indicators[1]]
+
+        if acf not in acf_color_map:
+            acf_color_map[acf] = scenario_colors[len(acf_color_map) % len(scenario_colors)]
+
+        for year in year_range:
+            if year not in x_data.index or year not in y_data.index:
+                continue
+
+            fig.add_trace(
+                go.Scatter(
+                    x=[x_data.loc[year, quantile]],
+                    y=[y_data.loc[year, quantile]],
+                    mode="markers",
+                    marker=dict(
+                        color=acf_color_map[acf],
+                        symbol=marker_styles.get(f"_and_implement_acf_{acf}", "circle") if marker_styles else "circle",
+                        size=8,
+                    ),
+                    name=f"ACF {acf}%" if col == 1 else None,
+                    showlegend=(col == 1),
+                ),
+                row=1,
+                col=col
+            )
+
+    fig.update_layout(
+        title=f"{', '.join(map(str, year_range))}",
+        xaxis_title=indicator_names.get(indicators[0], indicators[0]),
+        yaxis_title=indicator_names.get(indicators[1], indicators[1]),
+        legend=dict(
+            title="ACF level",
+            orientation="h",
+            yanchor="top",
+            y=-0.3,
+            xanchor="center",
+            x=0.5,
+            font=dict(size=10),
+        ),
+        margin=dict(l=50, r=50, t=60, b=100)
+    )
+
+    return fig
+
+
+
+
 def plot_indicator_vs_indicator(
     scenario_outputs: Dict[str, Dict[str, pd.DataFrame]],
     indicators: List[str],
