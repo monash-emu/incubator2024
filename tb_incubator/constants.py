@@ -9,11 +9,12 @@ COMPARTMENTS = [
     "early_latent", 
     "late_latent", 
     "infectious", 
+    "on_treatment",
     "recovered"
 ]
 
 LATENT_COMPARTMENTS = ["early_latent", "late_latent"]
-INFECTIOUS_COMPARTMENTS = ["infectious"]
+INFECTIOUS_COMPARTMENTS = ["infectious", "on_treatment"]
 
 # ========================================
 # Time and Stratifications

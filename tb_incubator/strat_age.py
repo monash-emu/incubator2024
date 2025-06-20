@@ -1,10 +1,10 @@
 from typing import List, Dict
 from summer2 import Overwrite, AgeStratification, Multiply
-from summer2.parameters import Parameter
+from summer2.parameters import Function
 from summer2.functions.time import get_sigmoidal_interpolation_function
 from .input import get_death_rates
 import tb_incubator.constants as const
-from .utils import get_average_sigmoid
+from .utils import get_average_sigmoid, calculate_treatment_outcomes
 
 compartments = const.COMPARTMENTS
 infectious_compartments = const.INFECTIOUS_COMPARTMENTS
@@ -25,28 +25,60 @@ def get_age_strat(params: Dict[str, any]) -> AgeStratification:
         AgeStratification: An object representing the configured age stratification for the model.
     """
     strat = AgeStratification("age", age_strata, compartments)
+    universal_death_funcs, death_adjs = get_universal_death_adjs(age_strata)
 
     # Set universal death rates
-    set_popdeath_adjs(age_strata, strat)
+    strat.set_flow_adjustments("universal_death", death_adjs)
 
     # Set age-specific latency rate
     set_latency_adjs(params, age_strata, strat)
 
     # Set age-adjusted infectiousness
-    add_infectiousness_adjs(infectious_compartments, params, age_strata, strat)
+    set_infectiousness_adjs(infectious_compartments, params, age_strata, strat)
+
+    # Set age-adjusted treatment outcomes
+    time_variant_tsr = get_sigmoidal_interpolation_function(
+        list(params["time_variant_tsr"].keys()),
+        list(params["time_variant_tsr"].values()),
+    )
+
+    treatment_recovery_funcs, treatment_death_funcs, treatment_relapse_funcs = (
+        {},
+        {},
+        {},
+    )
+
+    for age in age_strata:
+        natural_death_rate = universal_death_funcs[age]
+        treatment_outcomes = Function(
+            calculate_treatment_outcomes,
+            [
+                params["treatment_duration"],
+                params["prop_death_among_negative_tx_outcome"],
+                natural_death_rate,
+                time_variant_tsr,
+            ],
+        )
+        treatment_recovery_funcs[str(age)] = Multiply(treatment_outcomes[0])
+        treatment_death_funcs[str(age)] = Multiply(treatment_outcomes[1])
+        treatment_relapse_funcs[str(age)] = Multiply(treatment_outcomes[2])
+        
+    strat.set_flow_adjustments("treatment_recovery", treatment_recovery_funcs)
+    strat.set_flow_adjustments("treatment_death", treatment_death_funcs)
+    strat.set_flow_adjustments("relapse", treatment_relapse_funcs)
 
     return strat
 
-def set_popdeath_adjs(age_strata: List[int], strat: AgeStratification):
+def get_universal_death_adjs(age_strata: List[int]):
     deathrate_df, description = get_death_rates()
-    death_adjs = {}
+    universal_death_funcs, death_adjs = {}, {}
     for age in age_strata:
         years = deathrate_df.index
         rates = deathrate_df[age]
-        pop_death_func = get_sigmoidal_interpolation_function(years, rates)
-        death_adjs[str(age)] = Overwrite(pop_death_func)
-
-    strat.set_flow_adjustments("population_death", death_adjs)
+        universal_death_funcs[age] = get_sigmoidal_interpolation_function(years, rates)
+        death_adjs[str(age)] = Overwrite(universal_death_funcs[age])
+    
+    return universal_death_funcs, death_adjs
 
 def set_latency_adjs(params: Dict[str, any], age_strata: List[int], strat: AgeStratification):
     for flow_name, latency_params in params["age_latency"].items():
@@ -65,7 +97,7 @@ def set_latency_adjs(params: Dict[str, any], age_strata: List[int], strat: AgeSt
         adjs = {k: Overwrite(v) for k, v in adjs.items()}
         strat.set_flow_adjustments(flow_name, adjs)
 
-def add_infectiousness_adjs(
+def set_infectiousness_adjs(
     infectious_compartments: List[str],
     params: Dict[str, any],
     age_strata: List[int],
@@ -80,6 +112,9 @@ def add_infectiousness_adjs(
             else:
                 age_high = age_strata[i + 1]
                 average_infectiousness = get_average_sigmoid(age_low, age_high, inf_switch_age)
+            
+            if comp == "on_treatment":
+                average_infectiousness *= params["on_treatment_infect_multiplier"]
             # Update the adjustments dictionary for the current age group.
             inf_adjs[str(age_low)] = Multiply(average_infectiousness)
 

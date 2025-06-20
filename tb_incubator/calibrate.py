@@ -82,7 +82,6 @@ def get_all_priors(xpert_improvement = True, covid_effects: Dict[str, bool] = No
         esp.UniformPrior("base_diagnostic_capacity", (0.1, 0.90)),
         esp.UniformPrior("initial_notif_rate", (0.1, 0.90)),
         esp.UniformPrior("latest_notif_rate", (0.1, 0.90)),
-        #esp.UniformPrior("acf_sensitivity", (0.6, 0.99)),
         esp.BetaPrior.from_mean_and_ci("incidence_props_smear_positive_among_pulmonary", 0.65, (0.4, 0.90)),
         #esp.UniformPrior("progression_multiplier", (1.0,  2.0)),
         #esp.UniformPrior("rr_infection_latent", (0.1, 0.50)),
@@ -376,8 +375,8 @@ def plot_output_ranges(
         (
             [
                 (
-                    f"<b>{indicator_names[ind]}</b>"
-                    if ind in indicator_names
+                    f"<b>{INDICATOR_NAMES[ind]}</b>"
+                    if ind in INDICATOR_NAMES
                     else f"<b>{ind.replace('_', ' ').capitalize()}</b>"
                 )
                 for ind in indicators
@@ -600,7 +599,7 @@ def plot_output_ranges(
         fig.update_yaxes(
             range=[y_min - padding, y_max + padding],
             title=dict(
-                text=f"<b>{add_line_breaks(indicator_names.get(ind, ind.replace('_', ' ').capitalize()), max_chars=30)}</b>",
+                text=f"<b>{add_line_breaks(INDICATOR_NAMES.get(ind, ind.replace('_', ' ').capitalize()), max_chars=30)}</b>",
                 font=dict(size=12),
             ),
             row=row,

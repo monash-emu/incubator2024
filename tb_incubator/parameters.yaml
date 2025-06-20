@@ -35,6 +35,10 @@ descriptions:
   initial_notif_rate: "Initial proportion of TB patients that started treatment that are reported in official surveillance data"
   latest_notif_rate: "Latest proportion of TB patients that started treatment that are reported in official surveillance data"
   acf_sensitivity: "Sensitivity for active case finding (ACF) programme"
+  on_treatment_infect_multiplier: ""
+  prop_death_among_negative_tx_outcome: ""
+  treatment_duration: ""
+  time_variant_tsr: ""
 value:
   start_population_size: 1.0
   age_infectiousness_switch: 15.0
@@ -87,6 +91,41 @@ value:
   initial_notif_rate: 0.1
   latest_notif_rate: 0.8
   acf_sensitivity: 0.8
+  on_treatment_infect_multiplier: 0.08
+  prop_death_among_negative_tx_outcome: 0.03
+  treatment_duration: 0.5
+  time_variant_tsr:
+    1970: 0.10
+    1994: 0.94
+    1995: 0.91
+    1996: 0.81
+    1997: 0.54
+    1998: 0.58
+    1999: 0.50
+    2000: 0.87
+    2001: 0.86
+    2002: 0.86
+    2003: 0.87
+    2004: 0.87
+    2005: 0.89
+    2006: 0.90
+    2007: 0.90
+    2008: 0.90
+    2009: 0.89
+    2010: 0.89
+    2011: 0.88
+    2012: 0.86
+    2013: 0.88
+    2014: 0.84
+    2015: 0.85
+    2016: 0.86
+    2017: 0.85
+    2018: 0.83
+    2019: 0.83
+    2020: 0.86
+    2021: 0.87
+    2022: 0.87
+  
 unit:
   start_population_size: "person"
   age_infectiousness_switch: "years old"
@@ -124,6 +163,11 @@ unit:
   initial_notif_rate: ""
   latest_notif_rate: ""
   acf_sensitivity: ""
+  on_treatment_infect_multiplier: ""
+  prop_death_among_negative_tx_outcome: ""
+  treatment_duration: ""
+  time_variant_tsr: ""
+
 sources:
   start_population_size: "A value to avoid dividing by zero in the force of infection calculation"
   age_infectiousness_switch: "Set based on duration of BCG protection [@nguipdop2016, @roy2019]"
@@ -158,4 +202,7 @@ sources:
   initial_notif_rate: ""
   latest_notif_rate: ""
   acf_sensitivity: "Fitted"
-  
+  on_treatment_infect_multiplier: ""
+  prop_death_among_negative_tx_outcome: ""
+  treatment_duration: ""
+  time_variant_tsr: ""

@@ -1,8 +1,55 @@
 from jax import numpy as jnp
 from math import log, exp
-from typing import Dict, List
+from typing import Dict, Tuple
 import numpy as np
 import pandas as pd
+
+def calculate_treatment_outcomes(
+    duration: float, prop_death_among_non_success: float, natural_death_rate: float, tsr
+) -> Tuple:
+    """
+    Computes adjusted treatment outcome proportions over a given duration.
+
+    Args:
+        duration (float): Treatment duration in the same time units as natural_death_rate.
+        prop_death_among_non_success (float): Proportion of non-successful cases resulting in death (excluding natural deaths).
+        natural_death_rate (float): Annual natural death rate for those under treatment.
+        tsr (float): Treatment success rate.
+
+    Returns:
+        tuple of float: Adjusted proportions of treatment success, deaths from treatment (≥0), and relapse.
+
+    Notes:
+        - Accounts for natural deaths using exponential decay.
+        - Ensures treatment-related deaths are non-negative.
+    """
+    # Calculate the proportion of people dying from natural causes while on treatment
+    prop_natural_death_while_on_treatment = 1.0 - jnp.exp(
+        -duration * natural_death_rate
+    )
+
+    # Calculate the target proportion of treatment outcomes resulting in death based on requests
+    requested_prop_death_on_treatment = (1.0 - tsr) * prop_death_among_non_success
+
+    # Calculate the actual rate of deaths on treatment, with floor of zero
+    prop_death_from_treatment = jnp.max(
+        jnp.array(
+            (
+                requested_prop_death_on_treatment
+                - prop_natural_death_while_on_treatment,
+                0.0,
+            )
+        )
+    )
+
+    # Calculate the proportion of treatment episodes resulting in relapse
+    relapse_prop = (
+        1.0 - tsr - prop_death_from_treatment - prop_natural_death_while_on_treatment
+    )
+
+    return tuple(
+        [param * duration for param in [tsr, prop_death_from_treatment, relapse_prop]]
+    )
 
 def create_periodic_time_series(baseline_year, rate, frequency, baseline_rate=0.0):
     time_series = {}

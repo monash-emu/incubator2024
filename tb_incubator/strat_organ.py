@@ -39,7 +39,8 @@ def get_organ_strat(
     detection_adjs = {}
 
     # Detection, self-recovery and infect death
-    inf_adj, detection_adjs, tb_death_adjs, self_recovery_adjustments = {}, {}, {}, {}
+    inf_adj, detection_adjs, infect_death_adjs, self_recovery_adjustments = {}, {}, {}, {}
+
     for organ_stratum in organ_strata:
         # Define infectiousness adjustment by organ status
         inf_adj_param = fixed_params[f"{organ_stratum}_infect_multiplier"]
@@ -54,17 +55,17 @@ def get_organ_strat(
         detection_adjs[organ_stratum] = fixed_params[param_name] * detection_func
 
         # Calculate infection death adjustment using detection adjustments
-        tb_death_adjs[organ_stratum] = Parameter(f"{param_strat}_death_rate")
+        infect_death_adjs[organ_stratum] = Parameter(f"{param_strat}_death_rate")
        
 
     # Apply the Multiply function to the detection adjustments
     detection_adjs = {k: Multiply(v) for k, v in detection_adjs.items()}
-    tb_death_adjs = {k: Overwrite(v) for k, v in tb_death_adjs.items()}
+    infect_death_adjs = {k: Overwrite(v) for k, v in infect_death_adjs.items()}
 
     # Set flow and infectiousness adjustments
-    strat.set_flow_adjustments("treatment_commencement", detection_adjs)
+    strat.set_flow_adjustments("detection", detection_adjs)
     strat.set_flow_adjustments("self_recovery", self_recovery_adjustments)
-    strat.set_flow_adjustments("TB_death", tb_death_adjs)
+    strat.set_flow_adjustments("infect_death", infect_death_adjs)
     for comp in infectious_compartments:
         strat.add_infectiousness_adjustments(comp, inf_adj)
 
@@ -75,6 +76,7 @@ def get_organ_strat(
         * (1.0 - fixed_params["incidence_props_smear_positive_among_pulmonary"]),
         "extrapulmonary": 1.0 - fixed_params["incidence_props_pulmonary"],
     }
+
     for flow_name in ["early_activation", "late_activation"]:
         flow_adjs = {k: Multiply(v) for k, v in splitting_proportions.items()}
         strat.set_flow_adjustments(flow_name, flow_adjs)

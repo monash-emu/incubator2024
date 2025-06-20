@@ -59,7 +59,7 @@ def get_detection_func(
 
     ## xpert improvement
     diagnostic_capacity = Parameter("base_diagnostic_capacity") #Function(lambda: 1.0)
-    
+
     if xpert_improvement:
         diagnostic_improvement = calculate_xpert_util_improvement(xpert_util_target)
     else:
@@ -75,7 +75,12 @@ def get_detection_func(
         assert isinstance(improved_detection_multiplier, float) and improved_detection_multiplier > 0.0, "improved_detection_multiplier must be a positive float."
         detection_func = apply_future_detection_improvement(detection_func, improved_detection_multiplier)
     
-    detection_func
+    prop_reported_case = get_linear_interpolation_function(
+        [2017.0,2023.0],
+        [Parameter("initial_notif_rate"), Parameter("latest_notif_rate")]
+    )
+
+    detection_func *= prop_reported_case
 
     return detection_func, base_detection, diagnostic_capacity, diagnostic_improvement
 

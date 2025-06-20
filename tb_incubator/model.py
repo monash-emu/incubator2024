@@ -20,6 +20,8 @@ agegroup_request = const.AGEGROUP_REQUEST
 param_info = load_param_info()
 fixed_params = param_info["value"]
 
+PLACEHOLDER_PARAM = 1.0
+
 def build_model(
     params: Dict[str, any],
     xpert_improvement: bool = True,
@@ -80,7 +82,7 @@ def build_model(
     )
 
     # Demographic transitions
-    model.add_universal_death_flows("population_death", 1.0)  # later adjusted by age
+    model.add_universal_death_flows("universal_death", PLACEHOLDER_PARAM)  # later adjusted by age
     model.add_replacement_birth_flow("replacement_birth", "susceptible")
     entry_rate, description = get_population_entry_rate(model_times) # calculate population entry rates
 
@@ -93,11 +95,8 @@ def build_model(
 
     # TB natural history
     
-    for source in infectious_compartments:
-        model.add_death_flow("TB_death", 1.0, source) # later adjusted by organ status
-    
-    for source in infectious_compartments:
-        model.add_transition_flow("self_recovery", 1.0, source, "recovered") # later adjusted by organ status
+    model.add_death_flow("infect_death", PLACEHOLDER_PARAM, "infectious") # later adjusted by organ status
+    model.add_transition_flow("self_recovery", PLACEHOLDER_PARAM, "infectious", "recovered") # later adjusted by organ status
 
     add_infection_flow(model) # add infection flow
     add_latency_flow(model) # add latency flow
@@ -113,15 +112,13 @@ def build_model(
         "with latent infection to active TB. "
     )
     # Detection and treatment commencement
-    model.add_transition_flow("treatment_commencement", 1.0, "infectious", "recovered")
+    model.add_transition_flow("detection", PLACEHOLDER_PARAM, "infectious", "on_treatment")
+    add_treatment_related_outcomes(model)
 
     # Add ACF detection flow (will be adjusted later)
     if acf_screening_rate is not None:
         acf_detection_rate = calculate_acf_detection_rate(acf_screening_rate, acf_sensitivity)
-        model.add_transition_flow("acf_detection", acf_detection_rate, "infectious", "recovered")
-    else:
-        model.add_transition_flow("acf_detection", 0.0, "infectious", "recovered")
-
+        model.add_transition_flow("acf_detection", acf_detection_rate, "infectious", "on_treatment")
 
     # Age-stratification
     strat = get_age_strat(params)
@@ -138,6 +135,7 @@ def build_model(
     # Organ-stratification
     detection_func, base_detection, diagnostic_capacity, diagnostic_improvement = get_detection_func(xpert_improvement, covid_effects, xpert_util_target, improved_detection_multiplier)
     organ_strat= get_organ_strat(fixed_params, detection_func)
+    
     model.stratify_with(organ_strat)
 
     model.request_track_modelled_value("base_detection", base_detection)
@@ -160,12 +158,23 @@ def build_model(
     )
 
     # Request model outputs
-    request_model_outputs(model)
+    request_model_outputs(model, acf_screening_rate=acf_screening_rate)
     
     final_desc = "".join(desc)
 
     return model, final_desc
 
+def add_treatment_related_outcomes(model: CompartmentalModel):
+    treatment_outcomes_flows = [
+        ("treatment_recovery", 1.0, "recovered"),
+        ("relapse", 1.0, "infectious"),
+    ]
+
+    for flow_name, rate, destination in treatment_outcomes_flows:
+        model.add_transition_flow(flow_name, rate, "on_treatment", destination)
+
+    # Add death flow
+    model.add_death_flow("treatment_death", PLACEHOLDER_PARAM, "on_treatment")
 
 def calculate_acf_detection_rate(
     acf_screening_rate: Dict[float, float],
