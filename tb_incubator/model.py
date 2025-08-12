@@ -3,19 +3,12 @@ from summer2 import CompartmentalModel
 from summer2.parameters import Parameter, Time, Function
 from summer2.functions.time import get_linear_interpolation_function
 from .input import get_population_entry_rate, load_param_info
-import tb_incubator.constants as const
+from tb_incubator.constants import COMPARTMENTS, INFECTIOUS_COMPARTMENTS, AGE_STRATA, MODEL_TIMES, AGEGROUP_REQUEST
 from .utils import triangle_wave_func
 from .outputs import request_model_outputs
 from .strat_age import get_age_strat
 from .strat_organ import get_organ_strat
 from .detection import get_detection_func
-
-compartments = const.COMPARTMENTS
-infectious_compartments = const.INFECTIOUS_COMPARTMENTS
-age_strata = const.AGE_STRATA
-organ_strata = const.ORGAN_STRATA
-model_times = const.MODEL_TIMES
-agegroup_request = const.AGEGROUP_REQUEST
 
 param_info = load_param_info()
 fixed_params = param_info["value"]
@@ -30,6 +23,7 @@ def build_model(
     improved_detection_multiplier: float = None,
     acf_screening_rate: Dict[float, float] = None,
     acf_sensitivity: float = None,
+    apply_cdr_within_model: bool = False,
 ) -> CompartmentalModel:
     """
     Builds and returns a compartmental model for epidemiological studies, incorporating
@@ -50,15 +44,15 @@ def build_model(
     desc  = []
 
     model = CompartmentalModel(
-        times=model_times,
-        compartments=compartments,
-        infectious_compartments=infectious_compartments,
+        times=MODEL_TIMES,
+        compartments=COMPARTMENTS,
+        infectious_compartments=INFECTIOUS_COMPARTMENTS,
     )
 
     desc.append(
         "We used the [summer framework](https://summer2.readthedocs.io/en/latest/) "
         "to construct a compartmental model of tuberculosis (TB) dynamics. "
-        f"The base model consists of {len(compartments)} compartments: {', '.join([comp.replace('_', ' ') for comp in compartments])}--"
+        f"The base model consists of {len(COMPARTMENTS)} compartments: {', '.join([comp.replace('_', ' ') for comp in COMPARTMENTS])}--"
         "with flows added to represent the transitions and interactions between compartments. "
         "The susceptible (S) compartment includes individuals who have never had TB and are at risk "
         "of being infected by Mycobacterium tuberculosis. "
@@ -73,7 +67,7 @@ def build_model(
     seed_infectious(model) # seed infectious individuals
 
     desc.append(
-        f"The model is run from {model_times[0]} to {model_times[1]}, with an aim to capture the dynamics between the mid-1990s and 2024."
+        f"The model is run from {MODEL_TIMES[0]} to {MODEL_TIMES[1]}, with an aim to capture the dynamics between the mid-1990s and 2024."
         f"We mostly used estimates from previous study [@ragonnet2022] to inform TB progression "
         "and natural history of TB. "
         "We also fitted some parameters to local data on TB notifications [@whotb2023] and prevalence [@indoprevsurv2015], while "
@@ -84,7 +78,7 @@ def build_model(
     # Demographic transitions
     model.add_universal_death_flows("universal_death", PLACEHOLDER_PARAM)  # later adjusted by age
     model.add_replacement_birth_flow("replacement_birth", "susceptible")
-    entry_rate, description = get_population_entry_rate(model_times) # calculate population entry rates
+    entry_rate, description = get_population_entry_rate(MODEL_TIMES) # calculate population entry rates
 
     desc.append(
         "Births are modelled using a time-variant function of the population entry rate. "
@@ -124,7 +118,7 @@ def build_model(
     strat = get_age_strat(params)
     model.stratify_with(strat)
     desc.append(
-        f"We stratified the model based on {len(age_strata)} age groups: {', '.join(f'{start}-{end}' for start, end in agegroup_request)}. "
+        f"We stratified the model based on {len(AGE_STRATA)} age groups: {', '.join(f'{start}-{end}' for start, end in AGEGROUP_REQUEST)}. "
         "Age group-specific adjustments were applied for population death flows, latency flows, and infectiousness."
     )
 
@@ -133,7 +127,7 @@ def build_model(
     )
 
     # Organ-stratification
-    detection_func, base_detection, diagnostic_capacity, diagnostic_improvement = get_detection_func(xpert_improvement, covid_effects, xpert_util_target, improved_detection_multiplier)
+    detection_func, base_detection, diagnostic_capacity, diagnostic_improvement = get_detection_func(xpert_improvement, covid_effects, xpert_util_target, improved_detection_multiplier, apply_cdr_within_model)
     organ_strat= get_organ_strat(fixed_params, detection_func)
     
     model.stratify_with(organ_strat)
@@ -158,7 +152,7 @@ def build_model(
     )
 
     # Request model outputs
-    request_model_outputs(model, acf_screening_rate=acf_screening_rate)
+    request_model_outputs(model, acf_screening_rate=acf_screening_rate, apply_cdr_within_model=apply_cdr_within_model)
     
     final_desc = "".join(desc)
 
@@ -174,7 +168,7 @@ def add_treatment_related_outcomes(model: CompartmentalModel):
         model.add_transition_flow(flow_name, rate, "on_treatment", destination)
 
     # Add death flow
-    model.add_death_flow("treatment_death", PLACEHOLDER_PARAM, "on_treatment")
+    model.add_death_flow("treatment_death", PLACEHOLDER_PARAM, "on_treatment") 
 
 def calculate_acf_detection_rate(
     acf_screening_rate: Dict[float, float],

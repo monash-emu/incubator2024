@@ -1,9 +1,6 @@
 from pathlib import Path
 import numpy as np
 
-# ========================================
-# Compartments & Model Structure
-# ========================================
 COMPARTMENTS = [
     "susceptible", 
     "early_latent", 
@@ -16,9 +13,6 @@ COMPARTMENTS = [
 LATENT_COMPARTMENTS = ["early_latent", "late_latent"]
 INFECTIOUS_COMPARTMENTS = ["infectious", "on_treatment"]
 
-# ========================================
-# Time and Stratifications
-# ========================================
 MODEL_TIMES = [1800, 2035]
 
 AGEGROUP_REQUEST = [[0, 4], [5, 14], [15, 34], [35, 49], [50, 100]]
@@ -30,9 +24,6 @@ ORGAN_STRATA = [
     "extrapulmonary",
 ]
 
-# ========================================
-# Indicator Names (for Plotting / Output)
-# ========================================
 INDICATOR_NAMES = {
     "comp_size_susceptible": "Susceptible",
     "comp_size_early_latent": "Early latent",
@@ -40,7 +31,7 @@ INDICATOR_NAMES = {
     "comp_size_infectious": "Infectious",
     "comp_size_recovered": "Recovered",
     "total_population": "Total population",
-    "notification": "TB notifications",
+    "notification": "No. of case notification",
     "incidence": "TB incidence (per 100,000/year)",
     "percentage_latent": "Percentage of latent TB infection (%)",
     "prevalence": "TB (all forms) prevalence (per 100,000/year)",
@@ -57,9 +48,6 @@ INDICATOR_NAMES = {
 
 QUANTILES = [0.025, 0.25, 0.5, 0.75, 0.975]
 
-# ========================================
-# Scenario Labels
-# ========================================
 SCENARIO_NAMES = {
     'base_scenario': 'Baseline scenario',
     'increase_xpert_util_target_by_0_9': 'Xpert Utilisation: 90%',
@@ -102,9 +90,6 @@ for x in xpert_targets:
         label = f"Xpert Util: {int(x*100)}%; ACF: {int(acf)}%"
         SCENARIO_NAMES[key] = label
 
-# ========================================
-# Scenario Visual Styles
-# ========================================
 SCENARIO_DASH_STYLES = {
     "_case_detection_by_2_0": "solid",
     "_case_detection_by_5_0": "dash",
@@ -136,22 +121,16 @@ SCENARIO_MARKER_STYLES = {
 }
 
 SCENARIO_COLOURS = {
-    "xpert_util_target_by_0_9": 'rgb(68, 1, 84)',
-    "xpert_util_target_by_0_8": 'rgb(49, 104, 142)',
-    "xpert_util_target_by_0_7": 'rgb(53, 183, 121)', 
+    "xpert_util_target_by_0_9": 'rgb(68, 1, 84)', #violet
+    "xpert_util_target_by_0_8": 'rgb(255, 127, 0)', #orange
+    "xpert_util_target_by_0_7": 'rgb(31, 120, 180)', #blue
 }
 
-# ========================================
-# COVID Configs
-# ========================================
 COVID_CONFIGS = {
     'no_covid': {"detection_reduction": False},
     'case_detection_reduction_only': {"detection_reduction": True},
 }
 
-# ========================================
-# Project Paths
-# ========================================
 _PROJECT_PATH = None  # module-level global
 
 def set_project_base_path(path: Path):
@@ -178,7 +157,4 @@ data_path = project_paths["DATA_PATH"]
 image_path = project_paths["IMAGE_PATH"]
 out_path = project_paths["OUT_PATH"]
 
-# ========================================
-# Sampler
-# ========================================
 BURN_IN = 12500

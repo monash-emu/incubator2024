@@ -2,21 +2,14 @@ from typing import Dict
 from summer2.parameters import Parameter, Time, Function
 from summer2.functions.time import get_sigmoidal_interpolation_function, get_linear_interpolation_function, get_time_callable
 from .input import load_genexpert_util
-import tb_incubator.constants as const
 from .utils import tanh_based_scaleup
-import tb_incubator.constants as const
-
-compartments = const.COMPARTMENTS
-infectious_compartments = const.INFECTIOUS_COMPARTMENTS
-organ_strata = const.ORGAN_STRATA
-model_times = const.MODEL_TIMES
-agegroup_request = const.AGEGROUP_REQUEST
 
 def get_detection_func(
     xpert_improvement: bool = True,
     covid_effects: Dict[str, bool] = None,
     xpert_util_target: float = None,
-    improved_detection_multiplier: float = None
+    improved_detection_multiplier: float = None,
+    apply_cdr_within_model: bool = False,
 ) -> Function:
     """
     Creates a time-variant TB detection function that combines multiple factors affecting case detection.
@@ -75,12 +68,12 @@ def get_detection_func(
         assert isinstance(improved_detection_multiplier, float) and improved_detection_multiplier > 0.0, "improved_detection_multiplier must be a positive float."
         detection_func = apply_future_detection_improvement(detection_func, improved_detection_multiplier)
     
-    prop_reported_case = get_linear_interpolation_function(
-        [2017.0,2023.0],
-        [Parameter("initial_notif_rate"), Parameter("latest_notif_rate")]
-    )
-
-    detection_func *= prop_reported_case
+    if apply_cdr_within_model:
+        national_cdr = get_linear_interpolation_function(
+            [2017.0, 2023.0],
+            [Parameter("initial_notif_rate"), Parameter("latest_notif_rate")]
+        )
+        detection_func *= national_cdr
 
     return detection_func, base_detection, diagnostic_capacity, diagnostic_improvement
 

@@ -4,11 +4,14 @@ from typing import List, Dict
 from matplotlib import pyplot as plt
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
+import textwrap
+import xarray as xr
+from pathlib import Path
 
 from tb_incubator.utils import round_sigfig, get_target_from_name, get_row_col_for_subplots, create_periodic_time_series
 from tb_incubator.model import build_model
 from tb_incubator.input import load_targets, load_param_info
-from tb_incubator.plotting import get_standard_subplot_fig
+from tb_incubator.plotting import get_standard_subplot_fig, add_line_breaks
 from tb_incubator.constants import INDICATOR_NAMES, QUANTILES
 
 from estival import targets as est
@@ -19,6 +22,14 @@ from estival.model import BayesianCompartmentalModel
 import arviz as az
 from arviz.labels import MapLabeller
 
+import matplotlib.pyplot as plt
+from matplotlib import font_manager
+
+font_dirs = ["/Users/tys/Library/Fonts"]  # The path to the custom font file.
+font_files = font_manager.findSystemFonts(fontpaths=font_dirs)
+
+for font_file in font_files:
+    font_manager.fontManager.addfont(font_file)
 
 def get_bcm(
     params: Dict[str, any],
@@ -28,6 +39,7 @@ def get_bcm(
     improved_detection_multiplier: float = None,
     acf_screening_rate: Dict[float, float] = None,
     acf_sensitivity: float = None,
+    apply_cdr_within_model: bool = False,
 ) -> BayesianCompartmentalModel:
     """
     Constructs and returns a Bayesian Compartmental Model.
@@ -53,6 +65,7 @@ def get_bcm(
                               improved_detection_multiplier= improved_detection_multiplier,
                               acf_screening_rate=acf_screening_rate,
                               acf_sensitivity=acf_sensitivity,
+                              apply_cdr_within_model=apply_cdr_within_model
                 )
     priors = get_all_priors(xpert_improvement=xpert_improvement, covid_effects=covid_effects)
     targets = get_targets()
@@ -76,30 +89,16 @@ def get_all_priors(xpert_improvement = True, covid_effects: Dict[str, bool] = No
         esp.TruncNormalPrior("smear_negative_self_recovery", 0.139, 0.02, (0.07, 0.209)),
         esp.UniformPrior("screening_scaleup_shape", (0.04, 0.3)), 
         esp.UniformPrior("screening_inflection_time", (2000.0, 2015.0)),
-        #esp.TruncNormalPrior("screening_inflection_time", 2005.0, 3.5, (1995.0, 2010.0)),
-        esp.UniformPrior("time_to_screening_end_asymp", (0.40, 2.5)),
-        #esp.UniformPrior("notif_start_time", (1960.0, 1990.0)),
+        esp.UniformPrior("time_to_screening_end_asymp", (0.40, 3.0)),
         esp.UniformPrior("base_diagnostic_capacity", (0.1, 0.90)),
-        esp.UniformPrior("initial_notif_rate", (0.1, 0.90)),
-        esp.UniformPrior("latest_notif_rate", (0.1, 0.90)),
+        esp.UniformPrior("initial_notif_rate", (0.2, 0.90)),
+        esp.UniformPrior("latest_notif_rate", (0.4, 0.90)),
         esp.BetaPrior.from_mean_and_ci("incidence_props_smear_positive_among_pulmonary", 0.65, (0.4, 0.90)),
-        #esp.UniformPrior("progression_multiplier", (1.0,  2.0)),
-        #esp.UniformPrior("rr_infection_latent", (0.1, 0.50)),
-        #esp.UniformPrior("rr_infection_recovered", (0.2, 1.0)),
-        #esp.TruncNormalPrior("self_recovery_rate", 0.350, 0.028, (0.200, 0.500)),
-        #esp.UniformPrior("seed_time", (1800.0, 1850.0)),  
-        #esp.UniformPrior("seed_duration", (1.0, 20.0)),
-        #esp.UniformPrior("seed_rate", (1.0, 100.0)), 
-        #esp.UniformPrior("contact_reduction", (0.1, 0.9)),
-        #esp.UniformPrior("post_covid_improvement", (1.0, 6.0)),
-        #esp.UniformPrior("sustained_improvement", (1.0, 3.0)),
-        #esp.UniformPrior("incidence_props_smear_positive_among_pulmonary", (0.4, 0.90)),
-        #esp.BetaPrior.from_mean_and_ci("incidence_props_pulmonary", 0.9, (0.7, 0.95)),
     ]
     if xpert_improvement:
         priors.append(esp.BetaPrior.from_mean_and_ci("genexpert_sensitivity", 0.90, (0.80, 0.99)))
     if covid_effects["detection_reduction"]:
-        priors.append(esp.UniformPrior("detection_reduction", (0.1, 0.9)))
+        priors.append(esp.UniformPrior("detection_reduction", (0.1, 0.70)))
 
     return priors
 
@@ -279,7 +278,9 @@ def plot_posterior_comparison(
     idata: az.InferenceData,
     span: float,
     xpert_improvement: bool = True,
-    covid_effects: Dict[str, bool] = None
+    covid_effects: Dict[str, bool] = None,
+    color = "blue",
+    ncols = 3
 ) -> plt.Figure:
     """Area plot posteriors against prior distributions.
 
@@ -294,36 +295,48 @@ def plot_posterior_comparison(
     Returns:
         The figure
     """
-    title_fontsize = 25 
-    axis_fontsize = 18 
-    tick_fontsize = 16 
+    title_fontsize = 14 
+    axis_fontsize = 12 
+    tick_fontsize = 10 
 
     priors = get_all_priors(xpert_improvement=xpert_improvement, covid_effects=covid_effects)
     prior_names = [p.name for p in priors]
     params_desc = load_param_info()["descriptions"]
     params_units = load_param_info()["unit"]
+    nrows = int((np.ceil(len(prior_names) / ncols))+0.5) 
 
     labeller = MapLabeller(var_name_map=params_desc)
     comparison_plot = az.plot_density(
         idata,
         var_names=prior_names,
-        shade=0.5,
+        shade=0.6,
         labeller=labeller,
         point_estimate=None,
         hdi_prob=span,
+        colors=color,
+        grid=(nrows, ncols),
+        figsize=(20, 15)
     )
     req_priors = [p for p in priors if p.name in prior_names]
     for i_ax, ax in enumerate(comparison_plot.ravel()[: len(prior_names)]):
         prior = req_priors[i_ax]
         ax_limits = ax.get_xlim()
         x_vals = np.linspace(ax_limits[0], ax_limits[1], 100)
-        ax.set_xlabel(params_units[prior.name], fontsize=axis_fontsize, fontname="Arial")
+               
+        original_title = ax.get_title()
+        wrapped_title = '\n'.join(textwrap.wrap(original_title, width=40))
+        ax.set_title(wrapped_title, fontsize=title_fontsize, fontname='Space Grotesk')
+
+        ax.set_xlabel(params_units[prior.name], fontsize=axis_fontsize, 
+                      fontname="Space Grotesk")
         ax.title.set_size(title_fontsize)
-        ax.title.set_fontname('Arial')
-        ax.tick_params(axis="both", labelsize=tick_fontsize)
+        ax.title.set_fontname('Space Grotesk')
+        ax.tick_params(axis="both", 
+                       labelsize=tick_fontsize
+                       )
         y_vals = prior.pdf(x_vals)
-        ax.fill_between(x_vals, y_vals, color="k", alpha=0.2, linewidth=2)
-    plt.tight_layout(h_pad=0.5, w_pad=1.0)
+        ax.fill_between(x_vals, y_vals, color="k", alpha=0.2, linewidth=0)
+    #plt.tight_layout(h_pad=0.5, w_pad=1.0)
     plt.close()
     
     return comparison_plot[0, 0].figure
@@ -342,7 +355,7 @@ def plot_output_ranges(
     show_legend: bool = False,
     show_target_data: bool = True,
     legend_name: str = "Historical data",
-    colour: str = "0,30,180"
+    colour: str = "27,158,119"
 ) -> go.Figure:
     # Function body remains the same
     """
@@ -570,8 +583,18 @@ def plot_output_ranges(
 
         # Update x-axis range to fit the filtered data
         x_min = max(filtered_data.index.min(), current_plot_start_date)
-        x_max = filtered_data.index.max() + 1
-        fig.update_xaxes(range=[x_min, x_max], row=row, col=col)
+        x_max = filtered_data.index.max()
+
+        tick_interval = 25 if history else 2  # Set tick interval based on history
+        
+        fig.update_xaxes(
+            range=[x_min, x_max],
+            tickmode="linear",
+            tick0=x_min,
+            dtick=tick_interval,  # Adjust tick increment
+            row=row,
+            col=col
+        )
 
         # Update y-axis range dynamically for each subplot
         y_min = 0
@@ -599,8 +622,8 @@ def plot_output_ranges(
         fig.update_yaxes(
             range=[y_min - padding, y_max + padding],
             title=dict(
-                text=f"<b>{add_line_breaks(INDICATOR_NAMES.get(ind, ind.replace('_', ' ').capitalize()), max_chars=30)}</b>",
-                font=dict(size=12),
+                text=f"<b>{add_line_breaks(INDICATOR_NAMES.get(ind, ind.replace('_', ' ').capitalize()), max_chars=35)}</b>",
+                font=dict(size=14),
             ),
             row=row,
             col=col,
@@ -608,17 +631,15 @@ def plot_output_ranges(
             automargin=True
         )
 
-    tick_interval = 50 if history else 2  # Set tick interval based on history
-    fig.update_xaxes(
-        tickmode="linear",
-        tick0=plot_start_date,
-        dtick=tick_interval,  # Adjust tick increment
-    )
-
     # Update layout for the whole figure
     fig.update_layout(
         xaxis_title="",
         #yaxis_title="",
+        height=300 * nrows,
+        width=400 * n_cols,
+        template="plotly_white",
+        font_family="Space Grotesk",
+        title_font_family="Space Grotesk",
         showlegend=show_legend,  # Use the parameter
         legend=dict(
             orientation="h",  # Horizontal legend
@@ -626,33 +647,12 @@ def plot_output_ranges(
             y=-0.20,  # Position below the plot
             xanchor="center",
             x=0.5,
-            font=dict(size=10),
+            font=dict(size=12),
         ) if show_legend else None,
-        margin=dict(l=50, r=10, t=50, b=50),
+        margin=dict(l=20, r=20, t=20, b=20),
     )
 
     return fig
-
-def add_line_breaks(text, max_chars=15):
-    """Add line breaks to long text strings."""
-    words = text.split()
-    lines = []
-    current_line = []
-    current_length = 0
-    
-    for word in words:
-        if current_length + len(word) + len(current_line) <= max_chars:
-            current_line.append(word)
-            current_length += len(word)
-        else:
-            lines.append(" ".join(current_line))
-            current_line = [word]
-            current_length = len(word)
-    
-    if current_line:
-        lines.append(" ".join(current_line))
-    
-    return "<br>".join(lines)
 
 def tabulate_calib_results(
     idata: az.data.inference_data.InferenceData,
@@ -691,10 +691,11 @@ def tabulate_calib_results(
 def calculate_combined_xpert_acf_scenario_outputs(
     params: Dict[str, float],
     idata_extract: az.InferenceData,
-    indicators: List[str] = ['incidence', 'prevalence', 'notification', 'mortality', 'treatment_commencement', 'diagnostic_capacity'],
+    indicators: List[str] = ['incidence', 'prevalence', 'notification', 'mortality', 'diagnostic_capacity'],
     xpert_target_list: List[float] = [0.90, 0.80, 0.70],
     acf_rate_configs: Dict[str, Dict[float, float]] = None,
     covid_effects: Dict[str, bool] = None,
+    apply_cdr_within_model: bool = False,
 ) -> Dict[str, Dict[str, pd.DataFrame]]:
     """
     Calculate the model results for each ACF scenario and return the baseline and scenario outputs.
@@ -728,7 +729,7 @@ def calculate_combined_xpert_acf_scenario_outputs(
         for scenario_name, time_series_rates in acf_rate_configs.items():
             # Convert time series to appropriate format for your model
             bcm = get_bcm(params, xpert_improvement=True, covid_effects=covid_effects, xpert_util_target=xpert_target, 
-                         acf_screening_rate=time_series_rates)
+                         acf_screening_rate=time_series_rates, apply_cdr_within_model=apply_cdr_within_model)
             scenario_result = esamp.model_results_for_samples(idata_extract, bcm).results
             scenario_quantiles = esamp.quantiles_for_results(scenario_result, QUANTILES)
             
@@ -746,12 +747,13 @@ def calculate_combined_xpert_acf_scenario_outputs(
 def calculate_acf_scenario_outputs(
     params: Dict[str, float],
     idata_extract: az.InferenceData,
-    indicators: List[str] = ['incidence', 'prevalence', 'notification', 'mortality', 'treatment_commencement', 'diagnostic_capacity'],
+    indicators: List[str] = ['incidence', 'prevalence', 'notification', 'mortality', 'diagnostic_capacity'],
     acf_rate_configs: Dict[str, Dict[float, float]] = None,
     frequency: List[float] = [2.0, 3.0, 4.0],
     covid_effects: Dict[str, bool] = None,
     baseline_year: float = 2025.0,
     acf_rate: float = 0.2,
+    apply_cdr_within_model: bool = False,
 ) -> Dict[str, Dict[str, pd.DataFrame]]:
     """
     Calculate the model results for each ACF scenario and return the baseline and scenario outputs.
@@ -785,7 +787,7 @@ def calculate_acf_scenario_outputs(
         for scenario_name, time_series_rates in acf_rate_configs.items():
             # Convert time series to appropriate format for your model
             bcm = get_bcm(params, xpert_improvement=True, covid_effects=covid_effects, 
-                         acf_screening_rate=time_series_rates)
+                         acf_screening_rate=time_series_rates, apply_cdr_within_model=apply_cdr_within_model)
             scenario_result = esamp.model_results_for_samples(idata_extract, bcm).results
             scenario_quantiles = esamp.quantiles_for_results(scenario_result, QUANTILES)
 
@@ -796,7 +798,7 @@ def calculate_acf_scenario_outputs(
         for freq in frequency:
             periodic_acf = create_periodic_time_series(baseline_year, acf_rate, freq)
             bcm = get_bcm(params, xpert_improvement=True, covid_effects=covid_effects, 
-                          acf_screening_rate=periodic_acf)
+                          acf_screening_rate=periodic_acf, apply_cdr_within_model=apply_cdr_within_model)
             scenario_result = esamp.model_results_for_samples(idata_extract, bcm).results
             scenario_quantiles = esamp.quantiles_for_results(scenario_result, QUANTILES)
 
@@ -809,9 +811,10 @@ def calculate_acf_scenario_outputs(
 def calculate_xpert_scenario_outputs(
     params: Dict[str, float],
     idata_extract: az.InferenceData,
-    indicators: List[str] = ['incidence', 'prevalence', 'notification', 'mortality', 'treatment_commencement', 'diagnostic_capacity'],
+    indicators: List[str] = ['incidence', 'prevalence', 'notification', 'mortality', 'diagnostic_capacity'],
     xpert_target_list: List[float] = [0.90, 0.80, 0.70],
     covid_effects: Dict[str, bool] = None,
+    apply_cdr_within_model: bool = False,
 ) -> Dict[str, Dict[str, pd.DataFrame]]:
     """
     Calculate the model results for each scenario with different percentage of genexpert utilisation
@@ -839,7 +842,8 @@ def calculate_xpert_scenario_outputs(
 
     # Calculate quantiles for each improvement in xpert utilisation scenario
     for xpert_target in xpert_target_list:
-        bcm = get_bcm(params, xpert_improvement=True, covid_effects=covid_effects, xpert_util_target=xpert_target)
+        bcm = get_bcm(params, xpert_improvement=True, covid_effects=covid_effects, xpert_util_target=xpert_target,
+                      apply_cdr_within_model=apply_cdr_within_model)
         scenario_result = esamp.model_results_for_samples(idata_extract, bcm).results
         scenario_quantiles = esamp.quantiles_for_results(scenario_result, QUANTILES)
 
@@ -853,9 +857,10 @@ def calculate_xpert_scenario_outputs(
 def calculate_detection_scenario_outputs(
     params: Dict[str, float],
     idata_extract: az.InferenceData,
-    indicators: List[str] = ['incidence', 'prevalence', 'notification', 'mortality', 'treatment_commencement', 'diagnostic_capacity'],
+    indicators: List[str] = ['incidence', 'prevalence', 'notification', 'mortality', 'diagnostic_capacity'],
     detection_multiplier_list: List[float] = [2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0],
     covid_effects: Dict[str, bool] = None,
+    apply_cdr_within_model: bool = False,
 ) -> Dict[str, Dict[str, pd.DataFrame]]:
     """
     Calculate the model results for each scenario with different detection multipliers
@@ -883,7 +888,8 @@ def calculate_detection_scenario_outputs(
 
     # Calculate quantiles for each improvement in detection scenario
     for multiplier in detection_multiplier_list:
-        bcm = get_bcm(params, xpert_improvement=True, covid_effects=covid_effects, improved_detection_multiplier=multiplier)
+        bcm = get_bcm(params, xpert_improvement=True, covid_effects=covid_effects, improved_detection_multiplier=multiplier,
+                      apply_cdr_within_model=apply_cdr_within_model)
         scenario_result = esamp.model_results_for_samples(idata_extract, bcm).results
         scenario_quantiles = esamp.quantiles_for_results(scenario_result, QUANTILES)
 
@@ -896,10 +902,11 @@ def calculate_detection_scenario_outputs(
 def calculate_combined_detection_xpert_outputs(
     params: Dict[str, float],
     idata_extract: az.InferenceData,
-    indicators: List[str] = ['incidence', 'prevalence', 'notification', 'mortality', 'treatment_commencement', 'diagnostic_capacity'],
+    indicators: List[str] = ['incidence', 'prevalence', 'notification', 'mortality', 'diagnostic_capacity'],
     xpert_target_list: List[float] = [0.90, 0.80, 0.70],
     detection_multiplier_list: List[float] = [2.0, 5.0, 10.0],
     covid_effects: Dict[str, bool] = None,
+    apply_cdr_within_model: bool = False,
 ) -> Dict[str, Dict[str, pd.DataFrame]]:
     """
     Calculate the model results for combined scenarios with different xpert utilisation targets and detection multipliers,
@@ -934,7 +941,8 @@ def calculate_combined_detection_xpert_outputs(
                 xpert_improvement=True,
                 covid_effects=covid_effects,
                 xpert_util_target=xpert_target,
-                improved_detection_multiplier=multiplier
+                improved_detection_multiplier=multiplier,
+                apply_cdr_within_model=apply_cdr_within_model
             )
 
             scenario_result = esamp.model_results_for_samples(idata_extract, bcm).results
@@ -961,10 +969,160 @@ def calculate_base_scenario(
     params: Dict[str, float],
     idata_extract: az.InferenceData,
     covid_effects: Dict[str, bool] = None,
+    apply_cdr_within_model: bool = False
 ):
     # Base scenario (calculate outputs for all indicators)
-    bcm = get_bcm(params, xpert_improvement=True, covid_effects=covid_effects)
+    bcm = get_bcm(params, xpert_improvement=True, covid_effects=covid_effects, apply_cdr_within_model=apply_cdr_within_model)
     base_results = esamp.model_results_for_samples(idata_extract, bcm).results
     base_quantiles = esamp.quantiles_for_results(base_results, QUANTILES)
 
     return base_quantiles
+
+def get_quantile_outputs(file_suffixes, calib_out, save_transpose=True):
+    quantile_outputs = {}
+    
+    for suffix in file_suffixes:
+        spaghetti_data = pd.read_hdf(calib_out / f'results_{suffix}.hdf', 'spaghetti')
+        quantile_output = esamp.quantiles_for_results(spaghetti_data, QUANTILES)
+        
+        # Store quantile output
+        quantile_outputs[suffix] = quantile_output
+        quantile_output.to_csv(calib_out / f'results_{suffix}_quantile_outputs.csv', index=True)
+        
+        if save_transpose:
+            quantile_transpose = quantile_output.T
+            quantile_transpose.to_csv(calib_out / f'results_{suffix}_quantile_outputs_transpose.csv', index=True)
+            del quantile_transpose  # Free memory immediately
+        
+        # Clear spaghetti
+        del spaghetti_data
+        
+    return quantile_outputs
+
+def load_idata(out_path: str, scenario_configs: Dict) -> dict:
+    inference_data_dict = {}
+    for config_name in scenario_configs.keys():
+        calib_file = Path(out_path) / f"calib_full_out_{config_name}.nc"
+        if calib_file.exists():
+            idata_raw = az.from_netcdf(calib_file)
+            inference_data_dict[config_name] = idata_raw
+        else:
+            print(f"File {calib_file} does not exist.")
+    return inference_data_dict
+
+def extract_and_save_idata(idata_dict: Dict, output_dir: str, num_samples: int = 1000) -> None:
+    for config_name, burnt_idata in idata_dict.items():
+        # Extract samples (you might adjust the number of samples as needed)
+        idata_extract = az.extract(burnt_idata, num_samples=num_samples)
+
+        # Convert extracted data into InferenceData object
+        inference_data = az.convert_to_inference_data(
+            idata_extract.reset_index("sample")
+        )
+
+        # Save the extracted InferenceData object to a NetCDF file
+        output_file = Path(output_dir) / f"idata_{config_name}.nc"
+        az.to_netcdf(inference_data, output_file)
+        print(f"Saved extracted inference data for {config_name} to {output_file}")
+
+def convert_ll_to_idata(ll_res):
+    # Convert log-likelihoods into a DataFrame
+    df = pd.DataFrame(ll_res)
+
+    # Convert the DataFrame into an xarray.Dataset
+    ds = xr.Dataset.from_dataframe(df)
+
+    # Create an InferenceData object
+    idata = az.from_dict(
+        posterior={"logposterior": ds["logposterior"]},
+        prior={"logprior": ds["logprior"]},
+        log_likelihood={"total_loglikelihood": ds["loglikelihood"]},
+    )
+
+    return idata
+
+def load_extracted_idata(out_path: str, scenario_configs: Dict) -> Dict:
+    inference_data_dict = {}
+    for config_name in scenario_configs.keys():
+        input_file = Path(out_path) / f"idata_{config_name}.nc"
+        if input_file.exists():
+            idata = az.from_netcdf(input_file)
+            inference_data_dict[config_name] = idata
+        else:
+            print(f"File {input_file} does not exist.")
+    return inference_data_dict
+
+def run_model_for_scenario(params, output_dir, scenario_configs, quantiles):
+    scenario_outputs = {}
+
+    # Load the extracted InferenceData
+    inference_data_dict = load_extracted_idata(output_dir, scenario_configs)
+
+    for scenario_name, scenario_effects in scenario_configs.items():
+        # Load the inference data for this specific scenario
+        if scenario_name not in inference_data_dict:
+            print(f"Skipping {scenario_name} as no inference data was loaded.")
+            continue
+
+        idata_extract = inference_data_dict[scenario_name]
+
+        # Run the model for the current scenario
+        bcm = get_bcm(params, **scenario_effects,)  # Adjust this function as needed
+        model_results = esamp.model_results_for_samples(idata_extract, bcm)
+
+        # Extract results from the model output
+        spaghetti_res = model_results.results
+        ll_res = (
+            model_results.extras
+        )  # Extract additional results (e.g., log-likelihoods)
+        scenario_quantiles = esamp.quantiles_for_results(spaghetti_res, quantiles)
+
+        # Define the indicators you're interested in
+        indicators = ["notification", "adults_prevalence_pulmonary"]
+
+        missing_indicators = [
+            indicator
+            for indicator in indicators
+            if indicator not in scenario_quantiles.columns
+        ]
+        if missing_indicators:
+            print(
+                f"Missing indicators {missing_indicators} in scenario {scenario_name}. Skipping this scenario."
+            )
+            continue
+
+        # Store the DataFrame of quantiles directly for the defined indicators
+        indicator_outputs = scenario_quantiles[indicators]
+
+        # Store the outputs and log-likelihoods in the dictionary with the scenario name as the key
+        scenario_outputs[scenario_name] = {
+            "indicator_outputs": indicator_outputs,
+            "ll_res": ll_res,
+        }
+
+    return scenario_outputs
+
+def calculate_loo_comparison(assump_outputs):
+    loo_dict = {}
+
+    for name, output in assump_outputs.items():
+        # Extract the log-likelihoods (ll_res) for the current scenario
+        ll_res = output["ll_res"]
+
+        # Convert ll_res to InferenceData
+        idata = convert_ll_to_idata(ll_res)
+
+        # Store InferenceData in the dictionary for WAIC comparison
+        loo_dict[name] = idata
+
+    # Compare the WAIC across all scenarios
+    loo_results = {
+        config_name: az.loo(idata) for config_name, idata in loo_dict.items()
+    }
+
+    # Compare using az.compare
+    loo_comparison = az.compare(
+        loo_results, ic="loo"
+    )  # Using loo for information criterion
+
+    return loo_comparison

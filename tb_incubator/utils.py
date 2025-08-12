@@ -204,32 +204,28 @@ def get_param_table(param_info, prior_names=None):
 
     return fixed_param_table
 
-
 def get_row_col_for_subplots(i_panel, n_cols):
     return int(np.floor(i_panel / n_cols)) + 1, i_panel % n_cols + 1
 
-def get_next_run_number(out_path, num_priors):
+def get_next_run_number(out_path, draws, tune, config_name):
     """
     Find the next available run number for a specific number of priors.
     Returns a formatted string like '01', '02', etc.
     """
-    # Look for files matching the pattern with the specific number of priors
-    pattern = f'calib_full_out_p{num_priors:02d}_*.nc'
+    pattern = f'calib_full_out_{draws}d{tune}t_{config_name}*.nc'
     existing_files = list(out_path.glob(pattern))
     
     if not existing_files:
         return '01'
     
-    # Extract run numbers from existing files
     numbers = []
     for f in existing_files:
-        # Split filename and get the last part after 'p{num_priors}_'
         try:
-            run_num = int(f.stem.split('_')[-1])
+            run_num = int(f.stem.rsplit('_', 1)[-1])
             numbers.append(run_num)
         except ValueError:
             continue
-    
+
     next_num = max(numbers) + 1 if numbers else 1
     return f'{next_num:02d}'
 

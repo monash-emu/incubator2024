@@ -1,4 +1,5 @@
 from tb_incubator.constants import image_path
+import copy
 from IPython.display import display, SVG
 import plotly.express as px
 import plotly.graph_objects as go
@@ -7,14 +8,10 @@ import pandas as pd
 from typing import List, Dict, Optional
 from pandas import DataFrame, Series
 from plotly.subplots import make_subplots
-import tb_incubator.constants as const
+from tb_incubator.constants import SCENARIO_NAMES, QUANTILES, INDICATOR_NAMES
 from tb_incubator.utils import get_row_col_for_subplots
 import re
 from plotly.colors import hex_to_rgb
-
-scenario_names = const.SCENARIO_NAMES
-quantiles = const.QUANTILES
-indicator_names = const.INDICATOR_NAMES
 
 def plot_indicator_vs_indicator(
     scenario_outputs: Dict[str, Dict[str, pd.DataFrame]],
@@ -46,7 +43,7 @@ def plot_indicator_vs_indicator(
     )  # Use Plotly colors for other scenarios
 
     for scenario_idx, (scenario_name, quantile_outputs) in enumerate(scenario_outputs.items()):
-        display_name = scenario_names.get(scenario_name, scenario_name)
+        display_name = SCENARIO_NAMES.get(scenario_name, scenario_name)
 
         # Extract data for x and y indicators
         x_data = quantile_outputs[indicators[0]]
@@ -97,8 +94,8 @@ def plot_indicator_vs_indicator(
         fig.update_layout(
             #title=f"{indicators[0]} vs {indicators[-1]}",
             title=f"{', '.join(map(str, year_range))}",
-            xaxis_title=indicator_names.get(indicators[0], indicators[0]),
-            yaxis_title=indicator_names.get(indicators[-1], indicators[-1]),
+            xaxis_title=INDICATOR_NAMES.get(indicators[0], indicators[0]),
+            yaxis_title=INDICATOR_NAMES.get(indicators[-1], indicators[-1]),
             legend=dict(
                 title='Scenario',
                 orientation='h',
@@ -112,6 +109,64 @@ def plot_indicator_vs_indicator(
         )
 
     return fig
+
+def overlay_plots(plots, colors=None, 
+                 title=None, yaxis_title=None,
+                 update_layout=False):
+    if len(plots) < 2:
+        raise ValueError("Need at least 2 plots to overlay")
+    
+    default_colors = [
+        "rgb(217,95,2)",      # Orange
+        "rgb(27,158,119)",    # Teal  
+        "rgb(255,0,0)",       # Red (fixed - was duplicate orange)
+        "rgb(117,112,179)",   # Purple
+        "rgb(231,41,138)",    # Pink
+        "rgb(102,166,30)",    # Green
+        "rgb(230,171,2)"      # Yellow
+    ]
+    
+    if colors is None:
+        colors = default_colors
+    
+    overlay_fig = copy.deepcopy(plots[0])
+    
+    for i, plot in enumerate(plots[1:], 1):
+        num_traces_before = len(overlay_fig.data)
+        
+        for trace in plot.data:
+            overlay_fig.add_trace(copy.deepcopy(trace), row=1, col=1)
+        
+        color = colors[(i-1) % len(colors)]
+        fill_color = color.replace('rgb', 'rgba').replace(')', ',0.2)')
+        
+        for j in range(num_traces_before, len(overlay_fig.data)):
+            trace = overlay_fig.data[j]
+            
+            # Check if trace has line properties first
+            if hasattr(trace, 'line') and trace.line:
+                if hasattr(trace.line, 'width') and trace.line.width and trace.line.width > 0:
+                    overlay_fig.data[j].update(line=dict(color=color, width=trace.line.width))
+                else:
+                    overlay_fig.data[j].update(line=dict(color=color, width=0))
+            
+            if hasattr(trace, 'fillcolor'):
+                overlay_fig.data[j].update(fillcolor=fill_color)
+            
+            if hasattr(trace, 'marker') and trace.marker:
+                overlay_fig.data[j].update(marker=dict(color=color))
+    
+        # Apply layout updates if requested
+    if update_layout:
+        layout_updates = {
+            'title': title,
+            'yaxis_title': f"<b>{add_line_breaks(yaxis_title, max_chars=35).replace('<br>', '<br>')}</b>",
+            'margin': dict(l=20, r=20, t=20, b=20)
+        }
+            
+        overlay_fig.update_layout(**layout_updates)
+                
+    return overlay_fig
 
 def get_combined_plot(
     plot_list: List[go.Figure],
@@ -127,7 +182,7 @@ def get_combined_plot(
     # Handle subplot titles
     if subplot_titles is None:
         # Generate default titles if none provided
-        formatted_titles = [f"<b>Plot {i+1}</b>" for i in range(len(plot_list))]
+        formatted_titles = [f"" for i in range(len(plot_list))]
     else:
         # Format the provided titles with bold tags
         formatted_titles = [f"<b>{title}</b>" for title in subplot_titles]
@@ -143,12 +198,12 @@ def get_combined_plot(
         subplot_titles=formatted_titles,  # Use the formatted titles list
         shared_yaxes=shared_yaxes,
         shared_xaxes=shared_xaxes,
-        vertical_spacing=0.05,
-        horizontal_spacing=0.05,
+        vertical_spacing=0.1,
+        horizontal_spacing=0.15,
     )
     
     for annotation in fig['layout']['annotations']:
-        annotation['font'] = dict(size=12)  # Set font size for titles
+        annotation['font'] = dict(size=14)  # Set font size for titles
         
     for i, plot in enumerate(plot_list):
         row = i // n_cols + 1
@@ -156,20 +211,57 @@ def get_combined_plot(
         
         for trace in plot.data:
             fig.add_trace(trace, row=row, col=col)
-    
+        
+        # Copy x-axis settings from original plot
+        if hasattr(plot.layout, 'xaxis') and plot.layout.xaxis:
+            original_xaxis = plot.layout.xaxis
+            fig.update_xaxes(
+                range=original_xaxis.range,
+                tickmode=original_xaxis.tickmode,
+                tick0=original_xaxis.tick0,
+                dtick=original_xaxis.dtick,
+                row=row, 
+                col=col
+            )
+        
+        # Copy y-axis settings - but handle titles specially for shared axes
+        if hasattr(plot.layout, 'yaxis') and plot.layout.yaxis:
+            original_yaxis = plot.layout.yaxis
+            
+            # Use the shared_yaxes parameter to decide title behavior
+            if shared_yaxes and col != 1:
+                # Shared axes: only show title on left column
+                fig.update_yaxes(
+                    range=original_yaxis.range,
+                    row=row, 
+                    col=col
+                )
+            else:
+                # Not shared OR left column: show title
+                fig.update_yaxes(
+                    range=original_yaxis.range,
+                    title=original_yaxis.title,
+                    row=row, 
+                    col=col
+                )
+
     fig.update_layout(
         height=300 * nrows,
-        width=550 * n_cols,
+        width=400 * n_cols,
+        template="plotly_white",
+        font_family="Space Grotesk",
+        title_font_family="Space Grotesk",
         showlegend=showlegend,
         margin=dict(
-            l=50,  # left margin
-            r=50,  # right margin
-            t=60,  # top margin (increased for titles)
-            b=30   # bottom margin
+            l=20,  # left margin
+            r=20,  # right margin
+            t=20,  # top margin (increased for titles)
+            b=20   # bottom margin
         )
     )
     
     return fig
+
 
 def plot_scenario_output_ranges(
     scenario_outputs: Dict[str, Dict[str, pd.DataFrame]],
@@ -180,6 +272,7 @@ def plot_scenario_output_ranges(
     max_alpha: float = 0.2,
     showlegend: bool = True,
     show_ranges: bool = True,
+    show_title: bool = True,
     palette: str = "scientific_rainbow",
     dash_styles: Optional[Dict[str, str]] = None,
     color_styles: Optional[Dict[str, str]] = None,
@@ -202,14 +295,18 @@ def plot_scenario_output_ranges(
     fig = get_standard_subplot_fig(
         nrows,
         n_cols,
-        [
-            (
-                f"<b>{indicator_names[ind]}</b>"
-                if ind in indicator_names
-                else f"<b>{ind.replace('_', ' ').capitalize()}</b>"
-            )
-            for ind in indicators
-        ],
+        (
+            [
+                (
+                    f"<b>{INDICATOR_NAMES[ind]}</b>"
+                    if ind in INDICATOR_NAMES
+                    else f"<b>{ind.replace('_', ' ').capitalize()}</b>"
+                )
+                for ind in indicators
+            ]
+            if show_title
+            else ["" for _ in indicators]
+        ), # Conditionally set titles with bold tags
     )
     for annotation in fig['layout']['annotations']:
         annotation['font'] = dict(size=12)  # Set font size for titles
@@ -225,7 +322,7 @@ def plot_scenario_output_ranges(
         for scenario_idx, (scenario_name, quantile_outputs) in enumerate(
             scenario_outputs.items()
         ):
-            display_name = scenario_names.get(
+            display_name = SCENARIO_NAMES.get(
                 scenario_name, scenario_name
             )  # Get display name
 
@@ -258,18 +355,18 @@ def plot_scenario_output_ranges(
                 )
                 base_rgb = convert_color_to_rgb_tuple(base_color_str)
 
-                for q, quant in enumerate(quantiles):
+                for q, quant in enumerate(QUANTILES):
                     if quant not in filtered_data.columns:
                         continue
 
                     alpha = (
                         min(
                             (
-                                quantiles.index(quant),
-                                len(quantiles) - quantiles.index(quant),
+                                QUANTILES.index(quant),
+                                len(QUANTILES) - QUANTILES.index(quant),
                             )
                         )
-                        / (len(quantiles) / 2)
+                        / (len(QUANTILES) / 2)
                         * max_alpha
                     )
                     fill_color = f"rgba({base_rgb[0]}, {base_rgb[1]}, {base_rgb[2]}, {alpha})"  # Use rgba with appropriate alpha
@@ -296,7 +393,7 @@ def plot_scenario_output_ranges(
                     go.Scatter(
                         x=filtered_data.index,
                         y=filtered_data[0.5],
-                        mode="markers+lines",
+                        mode="lines",
                         line={
                             "color": line_color,
                             "dash": line_dash,
@@ -343,16 +440,29 @@ def plot_scenario_output_ranges(
 
     # Update layout for the whole figure
     # Calculate dynamic margin based on number of legend entries
-    legend_items = len([s for s in scenario_outputs.keys()])
-    legend_rows = np.ceil(legend_items / 3)  # Assume roughly 3 items per row
+    #legend_items = len([s for s in scenario_outputs.keys()])
+    #legend_rows = np.ceil(legend_items / 3)  # Assume roughly 3 items per row
     #bottom_margin = max(80, 40 + 25 * legend_rows)  # Base margin + extra per row
 
+        fig.update_yaxes(
+            title=dict(
+                text=f"<b>{add_line_breaks(INDICATOR_NAMES.get(ind, ind.replace('_', ' ').capitalize()), max_chars=35)}</b>",
+                font=dict(size=14),
+            ),
+            row=row,
+            col=col,
+            title_standoff=5,  # Adds space between axis and title for better visibility
+            automargin=True
+        )
     fig.update_layout(
-        title="",
+        #title="",
         xaxis_title="",
-        yaxis_title="",
+        #yaxis_title="",
+        template="plotly_white",
+        font_family="Space Grotesk",
+        title_font_family="Space Grotesk",
         showlegend=showlegend,
-        margin=dict(l=50, r=50, t=50, b=0),  # Dynamic bottom margin
+        margin=dict(l=20, r=20, t=20, b=20),  # Dynamic bottom margin
         legend=dict(
             title="",
             orientation="h",
@@ -446,18 +556,18 @@ def plot_scenario_output_ranges_by_col(
                 (data.index >= plot_start_date) & (data.index <= plot_end_date)
             ]
 
-            for quant in quantiles:
+            for quant in QUANTILES:
                 if quant not in filtered_data.columns:
                     continue
 
                 alpha = (
                     min(
                         (
-                            quantiles.index(quant),
-                            len(quantiles) - quantiles.index(quant),
+                            QUANTILES.index(quant),
+                            len(QUANTILES) - QUANTILES.index(quant),
                         )
                     )
-                    / (len(quantiles) / 2)
+                    / (len(QUANTILES) / 2)
                     * max_alpha
                 )
                 fill_color = f"rgba({color_to_rgb(color)[0]}, {color_to_rgb(color)[1]}, {color_to_rgb(color)[2]}, {alpha})"  # Ensure correct alpha blending
@@ -735,7 +845,7 @@ def get_standard_subplot_fig(
     """
     heights = [320, 600, 680]
     height = 680 if n_rows > 3 else heights[n_rows - 1]
-    fig = make_subplots(n_rows, n_cols, subplot_titles=titles, vertical_spacing=0.08, horizontal_spacing=0.06, shared_yaxes=share_y)
+    fig = make_subplots(n_rows, n_cols, subplot_titles=titles, vertical_spacing=0.08, horizontal_spacing=0.12, shared_yaxes=share_y)
     return fig.update_layout(margin={i: 25 for i in ['t', 'b', 'l', 'r']}, height=height)
 
 def plot_model_vs_actual(
@@ -824,10 +934,10 @@ def get_plot_param_checks(model, output, output_label, params, param_name, param
     return fig
 
 
-def set_plot_label(plot, indicator_names, y_axis):
+def set_plot_label(plot, indicatornames, y_axis):
     for trace in plot.data:
-        if trace.name in indicator_names:
-            new_name = indicator_names[trace.name]
+        if trace.name in indicatornames:
+            new_name = indicatornames[trace.name]
             trace.update(
                 name=new_name,
                 legendgroup=new_name,
@@ -868,14 +978,14 @@ def get_enhanced_color_palettes():
         
         # Option 2: Scientific rainbow (highly distinguishable)
         "scientific_rainbow": [
-            'rgb(68, 1, 84)',      # Purple (Viridis start)
+            'rgb(68, 1, 84)',      # Deep purple (Viridis start)
+            'rgb(0, 188, 212)',    # Bright cyan
             'rgb(31, 120, 180)',   # Blue
-            'rgb(51, 160, 44)',    # Green  
-            'rgb(255, 127, 0)',    # Orange
+            'rgb(255, 105, 180)',  # Hot pink (replaces light orange)
+            'rgb(51, 160, 44)',    # Green
             'rgb(227, 26, 28)',    # Red
-            'rgb(253, 191, 111)',  # Light orange
-            'rgb(255, 255, 51)',   # Yellow
-            'rgb(166, 206, 227)',  # Light blue
+            'rgb(148, 0, 211)',    # Dark violet
+            'rgb(255, 127, 0)',    # Orange
             'rgb(178, 223, 138)',  # Light green
         ],
         
@@ -999,4 +1109,31 @@ def convert_color_to_rgb_tuple(color_str):
             return hex_to_rgb(color_str)  # handles named colors if defined
         except ValueError:
             return (0, 0, 0)  # fallback to black
+
+def add_line_breaks(text, max_chars=15, html=True):
+    """Add line breaks to long text strings."""
+    words = text.split()
+    lines = []
+    current_line = []
+    current_length = 0
+    
+    for word in words:
+        space_length = 1 if current_line else 0
+        
+        if current_length + len(word) + space_length <= max_chars:
+            current_line.append(word)
+            current_length += len(word) + space_length
+        else:
+            if current_line:
+                lines.append(" ".join(current_line))
+            current_line = [word]
+            current_length = len(word)
+    
+    if current_line:
+        lines.append(" ".join(current_line))
+    
+    # Choose separator based on context
+    separator = "<br>" if html else "\n"
+    return separator.join(lines)
+
 
