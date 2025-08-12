@@ -3,13 +3,8 @@ from summer2 import Overwrite, AgeStratification, Multiply
 from summer2.parameters import Function
 from summer2.functions.time import get_sigmoidal_interpolation_function
 from .input import get_death_rates
-import tb_incubator.constants as const
+from tb_incubator.constants import COMPARTMENTS, INFECTIOUS_COMPARTMENTS, AGE_STRATA
 from .utils import get_average_sigmoid, calculate_treatment_outcomes
-
-compartments = const.COMPARTMENTS
-infectious_compartments = const.INFECTIOUS_COMPARTMENTS
-age_strata = const.AGE_STRATA
-agegroup_request = const.AGEGROUP_REQUEST
 
 # Age stratification
 def get_age_strat(params: Dict[str, any]) -> AgeStratification:
@@ -24,17 +19,17 @@ def get_age_strat(params: Dict[str, any]) -> AgeStratification:
     Returns:
         AgeStratification: An object representing the configured age stratification for the model.
     """
-    strat = AgeStratification("age", age_strata, compartments)
-    universal_death_funcs, death_adjs = get_universal_death_adjs(age_strata)
+    strat = AgeStratification("age", AGE_STRATA, COMPARTMENTS)
+    universal_death_funcs, death_adjs = get_universal_death_adjs(AGE_STRATA)
 
     # Set universal death rates
     strat.set_flow_adjustments("universal_death", death_adjs)
 
     # Set age-specific latency rate
-    set_latency_adjs(params, age_strata, strat)
+    set_latency_adjs(params, AGE_STRATA, strat)
 
     # Set age-adjusted infectiousness
-    set_infectiousness_adjs(infectious_compartments, params, age_strata, strat)
+    set_infectiousness_adjs(INFECTIOUS_COMPARTMENTS, params, AGE_STRATA, strat)
 
     # Set age-adjusted treatment outcomes
     time_variant_tsr = get_sigmoidal_interpolation_function(
@@ -48,7 +43,7 @@ def get_age_strat(params: Dict[str, any]) -> AgeStratification:
         {},
     )
 
-    for age in age_strata:
+    for age in AGE_STRATA:
         natural_death_rate = universal_death_funcs[age]
         treatment_outcomes = Function(
             calculate_treatment_outcomes,
@@ -69,10 +64,10 @@ def get_age_strat(params: Dict[str, any]) -> AgeStratification:
 
     return strat
 
-def get_universal_death_adjs(age_strata: List[int]):
+def get_universal_death_adjs():
     deathrate_df, description = get_death_rates()
     universal_death_funcs, death_adjs = {}, {}
-    for age in age_strata:
+    for age in AGE_STRATA:
         years = deathrate_df.index
         rates = deathrate_df[age]
         universal_death_funcs[age] = get_sigmoidal_interpolation_function(years, rates)
@@ -80,10 +75,10 @@ def get_universal_death_adjs(age_strata: List[int]):
     
     return universal_death_funcs, death_adjs
 
-def set_latency_adjs(params: Dict[str, any], age_strata: List[int], strat: AgeStratification):
+def set_latency_adjs(params: Dict[str, any], strat: AgeStratification):
     for flow_name, latency_params in params["age_latency"].items():
         adjs = {}
-        for age in age_strata:
+        for age in AGE_STRATA:
             param_age_bracket = max([k for k in latency_params if k <= age])
             age_val = latency_params[param_age_bracket]
 
@@ -98,19 +93,17 @@ def set_latency_adjs(params: Dict[str, any], age_strata: List[int], strat: AgeSt
         strat.set_flow_adjustments(flow_name, adjs)
 
 def set_infectiousness_adjs(
-    infectious_compartments: List[str],
     params: Dict[str, any],
-    age_strata: List[int],
     strat: AgeStratification,
 ):
     inf_switch_age = params["age_infectiousness_switch"]
-    for comp in infectious_compartments:
+    for comp in INFECTIOUS_COMPARTMENTS:
         inf_adjs = {}
-        for i, age_low in enumerate(age_strata):
-            if age_low == age_strata[-1]:
+        for i, age_low in enumerate(AGE_STRATA):
+            if age_low == AGE_STRATA[-1]:
                 average_infectiousness = 1.0
             else:
-                age_high = age_strata[i + 1]
+                age_high = AGE_STRATA[i + 1]
                 average_infectiousness = get_average_sigmoid(age_low, age_high, inf_switch_age)
             
             if comp == "on_treatment":

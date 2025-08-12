@@ -1,16 +1,8 @@
 from typing import List, Dict
 from summer2 import Stratification
 from summer2 import Overwrite, Multiply
-from summer2.parameters import Parameter, Time, Function
-from summer2.functions.time import get_sigmoidal_interpolation_function, get_linear_interpolation_function, get_time_callable
-import tb_incubator.constants as const
-
-
-compartments = const.COMPARTMENTS
-infectious_compartments = const.INFECTIOUS_COMPARTMENTS
-organ_strata = const.ORGAN_STRATA
-model_times = const.MODEL_TIMES
-agegroup_request = const.AGEGROUP_REQUEST
+from summer2.parameters import Parameter, Function
+from tb_incubator.constants import (INFECTIOUS_COMPARTMENTS, ORGAN_STRATA)
 
 
 def get_organ_strat(
@@ -33,7 +25,7 @@ def get_organ_strat(
     Returns:
         A Stratification object configured with organ-specific adjustments.
     """
-    strat = Stratification("organ", organ_strata, infectious_compartments)
+    strat = Stratification("organ", ORGAN_STRATA, INFECTIOUS_COMPARTMENTS)
 
     # Define different detection rates by organ status
     detection_adjs = {}
@@ -41,7 +33,7 @@ def get_organ_strat(
     # Detection, self-recovery and infect death
     inf_adj, detection_adjs, infect_death_adjs, self_recovery_adjustments = {}, {}, {}, {}
 
-    for organ_stratum in organ_strata:
+    for organ_stratum in ORGAN_STRATA:
         # Define infectiousness adjustment by organ status
         inf_adj_param = fixed_params[f"{organ_stratum}_infect_multiplier"]
         inf_adj[organ_stratum] = Multiply(inf_adj_param)
@@ -66,7 +58,7 @@ def get_organ_strat(
     strat.set_flow_adjustments("detection", detection_adjs)
     strat.set_flow_adjustments("self_recovery", self_recovery_adjustments)
     strat.set_flow_adjustments("infect_death", infect_death_adjs)
-    for comp in infectious_compartments:
+    for comp in INFECTIOUS_COMPARTMENTS:
         strat.add_infectiousness_adjustments(comp, inf_adj)
 
     splitting_proportions = {
