@@ -1,164 +1,107 @@
-from typing import Dict
+from typing import Dict, Optional, Any
 from summer2 import CompartmentalModel
 from summer2.parameters import Parameter, Time, Function
 from summer2.functions.time import get_linear_interpolation_function
-from .input import get_population_entry_rate, load_param_info
-from tb_incubator.constants import COMPARTMENTS, INFECTIOUS_COMPARTMENTS, AGE_STRATA, MODEL_TIMES, AGEGROUP_REQUEST
+from .input import get_population_entry_rate
+from .constants import COMPARTMENTS, INFECTIOUS_COMPARTMENTS, MODEL_TIMES, ImplementCDR, CUMULATIVE_OUTPUT_START_TIME
 from .utils import triangle_wave_func
 from .outputs import request_model_outputs
 from .strat_age import get_age_strat
 from .strat_organ import get_organ_strat
 from .detection import get_detection_func
 
-param_info = load_param_info()
-fixed_params = param_info["value"]
-
 PLACEHOLDER_PARAM = 1.0
 
 def build_model(
-    params: Dict[str, any],
+    fixed_params: Dict[str, Any],
+    covid_effects: bool = True,
+    apply_diagnostic_capacity: bool = True,
     xpert_improvement: bool = True,
-    covid_effects: Dict[str, bool] = None,
-    xpert_util_target: float = None,
-    improved_detection_multiplier: float = None,
-    acf_screening_rate: Dict[float, float] = None,
-    acf_sensitivity: float = None,
-    apply_cdr_within_model: bool = False,
+    apply_cdr: ImplementCDR = ImplementCDR.NONE,
+    improved_detection_multiplier: Optional[float] = None,
+    xpert_util_target: Optional[float] = None,
+    acf_screening_rate: Optional[Dict[float, float]] = None,
+    acf_sensitivity: Optional[float] = None,
+    tsr_target: Optional[float] = None,
 ) -> CompartmentalModel:
     """
     Builds and returns a compartmental model for epidemiological studies, incorporating
     various flows and stratifications based on age.
 
     Args:
-        params: Dictionary of parameters with fixed values
+        fixed_params: Dictionary of parameters with fixed values
+        covid_effects: Whether to include COVID-related reduction and post-COVID detection improvement
+        apply_diagnostic_capacity: Whether to apply diagnostic capacity scaling
         xpert_improvement: Whether to include improvement of GeneXpert utilisation for detection multiplier
-        covid_effect: Whether to include COVID-related reduction and post-COVID detection improvement
+        apply_cdr: Case detection rate implementation strategy
+        acf_screening_rate: Active case finding screening rates by time
+        acf_sensitivity: Sensitivity for active case finding
+        improved_detection_multiplier: Future detection improvement multiplier by 2030
+        xpert_util_target: Target Xpert utilization rate for 2030 (0-1)
+        tsr_target: Treatment success rate target
+        
     Returns:
         A configured CompartmentalModel object.
     """
-    if covid_effects is None:
-        covid_effects = {
-            "detection_reduction": False,
-        }
-    
-    desc  = []
-
     model = CompartmentalModel(
         times=MODEL_TIMES,
         compartments=COMPARTMENTS,
         infectious_compartments=INFECTIOUS_COMPARTMENTS,
     )
 
-    desc.append(
-        "We used the [summer framework](https://summer2.readthedocs.io/en/latest/) "
-        "to construct a compartmental model of tuberculosis (TB) dynamics. "
-        f"The base model consists of {len(COMPARTMENTS)} compartments: {', '.join([comp.replace('_', ' ') for comp in COMPARTMENTS])}--"
-        "with flows added to represent the transitions and interactions between compartments. "
-        "The susceptible (S) compartment includes individuals who have never had TB and are at risk "
-        "of being infected by Mycobacterium tuberculosis. "
-        "Latent TB infection is modelled using two compartments: early latent (E) and late latent (L). "
-        "Latently infected individuals who progress to active TB move to the infectious (I) compartment. "
-        "Those who recover through self-recovery are transferred to the recovery (R) compartment."
-        "Individuals who are detected are assumed to undergo treatment and fully recovered, hence they move from I to R.\n\n"
-    )
-
-
     model.set_initial_population({"susceptible": Parameter("start_population_size")}) # set initial population
     seed_infectious(model) # seed infectious individuals
-
-    desc.append(
-        f"The model is run from {MODEL_TIMES[0]} to {MODEL_TIMES[1]}, with an aim to capture the dynamics between the mid-1990s and 2024."
-        f"We mostly used estimates from previous study [@ragonnet2022] to inform TB progression "
-        "and natural history of TB. "
-        "We also fitted some parameters to local data on TB notifications [@whotb2023] and prevalence [@indoprevsurv2015], while "
-        "considering uncertainty around TB progression parameters (see @tbl-params). "
-        "Initially, we introduce a small number of population and seed infectious individuals to the model. "
-    )
 
     # Demographic transitions
     model.add_universal_death_flows("universal_death", PLACEHOLDER_PARAM)  # later adjusted by age
     model.add_replacement_birth_flow("replacement_birth", "susceptible")
-    entry_rate, description = get_population_entry_rate(MODEL_TIMES) # calculate population entry rates
-
-    desc.append(
-        "Births are modelled using a time-variant function of the population entry rate. "
-        "The entry rate was calculated by dividing the yearly population difference by the duration of the run-in period. "
-        "Time-varying and age-specific non-TB-related mortality was applied to all compartments to represent deaths from "
-        "non-TB causes. Estimates from the United Nations’ World Population Prospects [@unwpp2024] were used as reference data.\n\n"
-    )
+    entry_rate = get_population_entry_rate(MODEL_TIMES) # calculate population entry rates
 
     # TB natural history
-    
     model.add_death_flow("infect_death", PLACEHOLDER_PARAM, "infectious") # later adjusted by organ status
     model.add_transition_flow("self_recovery", PLACEHOLDER_PARAM, "infectious", "recovered") # later adjusted by organ status
 
     add_infection_flow(model) # add infection flow
     add_latency_flow(model) # add latency flow
 
-    desc.append(
-        "We use estimates reported in a previous study [@ragonnet2022] for TB-specific mortality, self-recovery rate, and "
-        "age-specific infectiousness to inform the TB dynamics. "
-        "Reinfection was illustrated in two different ways: "
-        "flows from late latent (L) to early latent compartment (E) and "
-        "from individuals who have recovered from TB (R) to early latent. "
-        "Both pathways can be adjusted to reflect different reinfection risks compared to infection-naïve individuals. "
-        "Progression flows from latent compartments to infectious compartment are also implemented to model the progression from individuals "
-        "with latent infection to active TB. "
-    )
     # Detection and treatment commencement
     model.add_transition_flow("detection", PLACEHOLDER_PARAM, "infectious", "on_treatment")
     add_treatment_related_outcomes(model)
 
-    # Add ACF detection flow (will be adjusted later)
+    # Add ACF detection flow 
     if acf_screening_rate is not None:
         acf_detection_rate = calculate_acf_detection_rate(acf_screening_rate, acf_sensitivity)
         model.add_transition_flow("acf_detection", acf_detection_rate, "infectious", "on_treatment")
 
     # Age-stratification
-    strat = get_age_strat(params)
+    strat = get_age_strat(fixed_params, tsr_target)
     model.stratify_with(strat)
-    desc.append(
-        f"We stratified the model based on {len(AGE_STRATA)} age groups: {', '.join(f'{start}-{end}' for start, end in AGEGROUP_REQUEST)}. "
-        "Age group-specific adjustments were applied for population death flows, latency flows, and infectiousness."
-    )
 
     model.add_importation_flow( # Add births as additional entry rate, (split imports in case the susceptible compartments are further stratified later)
         "births", entry_rate, dest="susceptible", split_imports=True, dest_strata={"age": "0"}
     )
-
-    # Organ-stratification
-    detection_func, base_detection, diagnostic_capacity, diagnostic_improvement = get_detection_func(xpert_improvement, covid_effects, xpert_util_target, improved_detection_multiplier, apply_cdr_within_model)
-    organ_strat= get_organ_strat(fixed_params, detection_func)
     
-    model.stratify_with(organ_strat)
-
-    model.request_track_modelled_value("base_detection", base_detection)
-    model.request_track_modelled_value("diagnostic_capacity", diagnostic_capacity)
-    model.request_track_modelled_value("diagnostic_improvement", diagnostic_improvement)
-    model.request_track_modelled_value("final_detection", detection_func)
-
-    desc.append(
-        "The detection rate refers to the progression of individuals with active TB (I) "
-        "to the recovered (R) compartment, based on the assumption that detected individuals receive "
-        "immediate treatment upon diagnosis, leading to their recovery. "
-        "Furthermore, we implement changes in the diagnostic algorithm to model the improved "
-        "diagnostic test (GeneXpert) utilisation. "
-        "We assume that utilisation is proportional to the number of confirmed cases identified by GeneXpert. "
-        #"To inform the time-variant proportion of utilisation, we use Indonesia's Ministry of Health GeneXpert utilisation data from 2016 to 2022 [@moh2022]. "
-        #"This proportion is multiplied by the diagnostic sensitivity and the potential improvement "
-        #"in sensitivity to reflect the enhancements of the diagnostic test. "
-        "The calculated improvement in diagnostic "
-        "sensitivity is then applied to the following year's data. \n\n"
+    detection_func = get_detection_func(
+        covid_effects=covid_effects,
+        improved_detection_multiplier=improved_detection_multiplier,
+        apply_diagnostic_capacity=apply_diagnostic_capacity,
+        xpert_improvement=xpert_improvement,
+        apply_cdr=apply_cdr,
+        xpert_util_target=xpert_util_target
     )
 
+    # Organ-stratification
+    organ_strat = get_organ_strat(fixed_params, detection_func)
+    model.stratify_with(organ_strat)
+    model.request_track_modelled_value("final_detection", detection_func)
+
     # Request model outputs
-    request_model_outputs(model, acf_screening_rate=acf_screening_rate, apply_cdr_within_model=apply_cdr_within_model)
-    
-    final_desc = "".join(desc)
+    request_model_outputs(model, detection_func, acf_screening_rate, apply_cdr=apply_cdr, 
+                          cumulative_output_start_time=CUMULATIVE_OUTPUT_START_TIME)
 
-    return model, final_desc
+    return model
 
-def add_treatment_related_outcomes(model: CompartmentalModel):
+def add_treatment_related_outcomes(model: CompartmentalModel) -> None:
     treatment_outcomes_flows = [
         ("treatment_recovery", 1.0, "recovered"),
         ("relapse", 1.0, "infectious"),
@@ -172,25 +115,25 @@ def add_treatment_related_outcomes(model: CompartmentalModel):
 
 def calculate_acf_detection_rate(
     acf_screening_rate: Dict[float, float],
-    acf_sensitivity: float = None, 
-):
+    acf_sensitivity: Optional[float] = None, 
+) -> Function:  
+    """Calculate active case finding detection rate based on screening rate and sensitivity."""
     times = list(acf_screening_rate.keys())
     
-    if acf_sensitivity is None:
-        sensitivity = Parameter("acf_sensitivity")
-    else:
+    if acf_sensitivity is not None:
         sensitivity = acf_sensitivity
+    else:
+        sensitivity = Parameter("acf_sensitivity")
     
     acf_rate_vals = [
         screening_rate * sensitivity
         for screening_rate in acf_screening_rate.values()
     ]
     
-    acf_detection_rate = get_linear_interpolation_function(times, acf_rate_vals)
-    return acf_detection_rate
+    return get_linear_interpolation_function(times, acf_rate_vals)
 
 # Add latency structures
-def add_latency_flow(model):
+def add_latency_flow(model: CompartmentalModel) -> None:
     latency_flows = [
         ["stabilisation", "early_latent", "late_latent"],
         ["early_activation", "early_latent", "infectious"],
@@ -200,13 +143,12 @@ def add_latency_flow(model):
     for flow, source, dest in latency_flows:
         model.add_transition_flow(flow, 1.0, source, dest)
 
-def add_infection_flow(model):
+def add_infection_flow(model: CompartmentalModel) -> None:
     """
     Adds infection flows from various compartments to early latent TB.
     
     Args:
         model: The compartmental model
-        covid_effects: Dictionary with COVID effect settings
     """        
     infection_flows = [
         ["susceptible", None],
@@ -215,10 +157,6 @@ def add_infection_flow(model):
     ]
     
     contact_rate = Parameter("contact_rate")
-    #if covid_effects["contact_reduction"]:
-    #    contact_rate *= get_linear_interpolation_function(
-    #        [2019.0, 2020.0, 2022.0], [1.0, 1.0 - Parameter("contact_reduction"), 1.0]
-    #    )
         
     for origin, modifier in infection_flows:
         modifier = Parameter(modifier) if modifier else 1.0
@@ -227,7 +165,7 @@ def add_infection_flow(model):
         model.add_infection_frequency_flow(name, rate, origin, "early_latent")
 
 
-def seed_infectious(model: CompartmentalModel):
+def seed_infectious(model: CompartmentalModel) -> None:
     """
     Adds an importation flow to the model to simulate the initial seeding of infectious individuals.
     This is used to introduce the disease into the population at any time of the simulation.
@@ -239,7 +177,7 @@ def seed_infectious(model: CompartmentalModel):
         Time,
         Parameter("seed_time"),
         Parameter("seed_duration"),
-        Parameter("seed_rate"),
+        Parameter("seed_num"),
     ]
     seed_func = Function(triangle_wave_func, seed_args)
     model.add_importation_flow(

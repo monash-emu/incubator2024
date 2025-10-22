@@ -3,6 +3,8 @@ from math import log, exp
 from typing import Dict, Tuple
 import numpy as np
 import pandas as pd
+from tb_incubator.constants import project_path, PARAMETER_GROUPS, PARAMETER_SECTIONS, ImplementCDR
+import yaml as yml
 
 def calculate_treatment_outcomes(
     duration: float, prop_death_among_non_success: float, natural_death_rate: float, tsr
@@ -129,90 +131,263 @@ def dict_to_markdown_table(data_dict, decimal_places=4):
     
     return markdown_table
 
-def get_param_table(param_info, prior_names=None):
+def load_full_param_info() -> pd.DataFrame:
     """
-    Get parameter info in a tidy pd.Dataframe format.
+    Load specific parameter information from a ridigly formatted yaml file, and crash otherwise.
+
+    Returns:
+        The parameters info DataFrame contains the following field:
+            value: Enough parameter values to ensure model runs, may be over-written in calibration
+    """
+    with open(project_path / "parameters.yaml", "r") as param_file:
+        param_info = yml.safe_load(param_file)
+
+    return param_info
+
+def create_parameter_table(
+    priors, 
+    fixed_params_info, 
+    sections=["Demographics", "TB transmission and disease natural history", "TB control (detection and treatment)"],
+    drop_columns=['Group', 'Unit'],
+    additional_params=None
+):
+    """
+    Create a formatted parameter table with sections.
     
     Args:
-        param_info: Dictionary containing parameter information
-        prior_names: List of parameter names that should be marked as "Calibrated"
-                    rather than showing their values
+        priors: List of prior objects from get_all_priors()
+        fixed_params_info: Dictionary with parameter information from load_full_param_info()
+        sections: List of section names to include (default: all available sections)
+                 e.g., ["Demographics", "TB transmission and disease natural history"]
+        drop_columns: List of columns to drop (default: ['Group', 'Unit'])
+        additional_params: List of dicts for manually added parameters
+                          e.g., [{"Parameter": "Birth rate", "Value": "Time-variant", ...}]
     
     Returns:
-        pd.DataFrame: Formatted parameter table
+        pandas DataFrame with formatted parameter table
     """
-    if prior_names is None:
-        prior_names = []
-        
+    import pandas as pd
+    
+    # Default values
+    if drop_columns is None:
+        drop_columns = ['Group', 'Unit']
+    
+    # Extract prior names
+    priors_str = [str(prior) for prior in priors]
+    prior_names = [priors[1] for priors in map(str.split, priors_str)]
+    
+    # Build parameter table
     param_table = []
-    for key in param_info["value"]:
-        if isinstance(param_info["value"][key], dict):
-            if key in param_info["unit"]:
-                for subkey, value in param_info["value"][key].items():
-                    # Create full parameter name for checking calibration status
+    processed_keys = set()
+    
+    # Process grouped parameters first
+    for group_name, group_info in PARAMETER_GROUPS.items():
+        group_keys = group_info["keys"]
+        existing_keys = [k for k in group_keys if k in fixed_params_info["value"]]
+        if not existing_keys:
+            continue
+        
+        values, units, sources, groups = [], [], [], []
+        all_calibrated = True
+        
+        for key in existing_keys:
+            processed_keys.add(key)
+            
+            if key in prior_names:
+                values.append("Calibrated")
+            else:
+                value = fixed_params_info["value"][key]
+                values.append(str(round(value, 3) if value != 0.0 else 0.0))
+                all_calibrated = False
+            
+            units.append(fixed_params_info["unit"][key])
+            sources.append(fixed_params_info["sources"][key])
+            groups.append(fixed_params_info["group"][key])
+        
+        value_str = "Calibrated" if all_calibrated else " / ".join(values)
+        
+        param_table.append({
+            "Parameter": group_info["shared_description"],
+            "Value": value_str,
+            "Unit": units[0] if len(set(units)) == 1 else " / ".join(units),
+            "Source": sources[0] if len(set(sources)) == 1 else " / ".join(sources),
+            "Group": groups[0] if len(set(groups)) == 1 else " / ".join(groups),
+        })
+    
+    # Process non-grouped parameters
+    for key in fixed_params_info["value"]:
+        if key in processed_keys:
+            continue
+            
+        if isinstance(fixed_params_info["value"][key], dict):
+            if key == "time_variant_tsr" or "time_variant" in key:
+                value_str = "Calibrated" if key in prior_names else "time-variant"
+                
+                param_table.append({
+                    "Parameter": fixed_params_info["descriptions"][key],
+                    "Value": value_str,
+                    "Unit": fixed_params_info["unit"][key],
+                    "Source": fixed_params_info["sources"][key],
+                    "Group": fixed_params_info["group"][key],
+                })
+            elif key in fixed_params_info["unit"]:
+                for subkey, value in fixed_params_info["value"][key].items():
                     param_name = f"{key}.{subkey}"
                     
-                    # Format value based on whether it's calibrated
                     if param_name in prior_names:
                         value_str = "Calibrated"
                     else:
-                        # Handle dictionary values
                         if isinstance(value, dict):
-                            value_str = "/".join(f"{k}: {v}" for k, v in value.items())
+                            value_str = "/".join(str(v) for v in value.values())
                         else:
-                            # Round numerical values
                             value_str = str(round(value, 3) if value != 0.0 else 0.0)
                     
-                    param_table.append(
-                        {
-                            "Parameter": f"{param_info['descriptions'][key][subkey]}",
-                            "Value": value_str,
-                            "Unit": param_info["unit"][key][subkey],
-                            "Source": param_info["sources"][key],
-                        }
-                    )
+                    param_table.append({
+                        "Parameter": f"{fixed_params_info['descriptions'][key][subkey]}",
+                        "Value": value_str,
+                        "Unit": fixed_params_info["unit"][key][subkey],
+                        "Source": fixed_params_info["sources"][key][subkey],
+                        "Group": fixed_params_info["group"][key][subkey],
+                    })
         else:
-            # Check if this parameter is calibrated
-            if key in prior_names:
-                value_str = "Calibrated"
-            else:
-                # Round numerical values
-                value = param_info["value"][key]
-                value_str = str(round(value, 3) if value != 0.0 else 0.0)
-            
-            param_table.append(
-                {
-                    "Parameter": param_info["descriptions"][key],
-                    "Value": value_str,
-                    "Unit": param_info["unit"][key],
-                    "Source": param_info["sources"][key],
-                }
+            value_str = "Calibrated" if key in prior_names else str(
+                round(fixed_params_info["value"][key], 3) 
+                if fixed_params_info["value"][key] != 0.0 else 0.0
             )
+            
+            param_table.append({
+                "Parameter": fixed_params_info["descriptions"][key],
+                "Value": value_str,
+                "Unit": fixed_params_info["unit"][key],
+                "Source": fixed_params_info["sources"][key],
+                "Group": fixed_params_info["group"][key],
+            })
+    
+    # Add calibrated-only parameters
+    processed_params = set(fixed_params_info["value"].keys())
+    for key in fixed_params_info["value"]:
+        if isinstance(fixed_params_info["value"][key], dict):
+            for subkey in fixed_params_info["value"][key].keys():
+                processed_params.add(f"{key}.{subkey}")
+    
+    for param_name in prior_names:
+        if param_name not in processed_params:
+            param_table.append({
+                "Parameter": fixed_params_info["descriptions"].get(param_name, param_name),
+                "Value": "Calibrated",
+                "Unit": fixed_params_info["unit"].get(param_name, ""),
+                "Source": fixed_params_info["sources"].get(param_name, "Calibrated"),
+                "Group": fixed_params_info["group"].get(param_name, ""),
+            })
+    
+    # Add additional parameters if provided
+    if additional_params:
+        param_table.extend(additional_params)
+    
+    # Determine which sections to include
+    if sections is None:
+        sections = list(PARAMETER_SECTIONS.keys())
+    
+    # Create section tables with headers
+    section_dfs = []
+    for section_name in sections:
+        section_params = get_rows_by_section(param_table, section_name, fixed_params_info)
+        if not section_params:
+            continue
+        
+        # Create header
+        header = pd.DataFrame([{
+            "Parameter": f"\\textbf{{{section_name}}}",
+            "Value": "",
+            "Unit": "",
+            "Source": "",
+            "Group": "",
+        }])
+        
+        # Create section table
+        section_df = pd.DataFrame(section_params)
+        section_dfs.append(pd.concat([header, section_df], ignore_index=True))
+    
+    # Combine all sections
+    if not section_dfs:
+        return pd.DataFrame()
+    
+    combined_df = pd.concat(section_dfs, ignore_index=True)
+    
+    # Drop specified columns
+    if drop_columns:
+        combined_df = combined_df.drop(columns=drop_columns, errors='ignore')
+    
+    # Capitalize column names
+    combined_df.columns = combined_df.columns.str.capitalize()
+    
+    return combined_df
 
-    # Create DataFrame and set index
-    fixed_param_table = pd.DataFrame(param_table)
-    fixed_param_table = fixed_param_table.set_index("Parameter")
+def get_section_for_param(param_description, fixed_params_info):
+    """Match parameter description to its section"""
+    # First, check for direct description match (for manually added rows)
+    for section_name, param_keys in PARAMETER_SECTIONS.items():
+        if param_description in param_keys:
+            return section_name
     
-    # Format column names
-    fixed_param_table.columns = fixed_param_table.columns.str.capitalize()
-    
-    # Reorder columns to match the second example if desired
-    fixed_param_table = fixed_param_table[["Value", "Unit", "Source"]]
-    
-    # Capitalize units
-    fixed_param_table["Unit"] = fixed_param_table["Unit"].str.capitalize()
+    # Then check grouped descriptions
+    for section_name, param_keys in PARAMETER_SECTIONS.items():
+        for key in param_keys:
+            # Check if it matches a group
+            if key in PARAMETER_GROUPS:
+                if param_description == PARAMETER_GROUPS[key]["shared_description"]:
+                    return section_name
+            # Check if it matches individual parameters from YAML
+            elif key in fixed_params_info.get("descriptions", {}):
+                if isinstance(fixed_params_info["descriptions"][key], dict):
+                    for subkey_desc in fixed_params_info["descriptions"][key].values():
+                        if param_description == subkey_desc:
+                            return section_name
+                else:
+                    if param_description == fixed_params_info["descriptions"][key]:
+                        return section_name
+    return "Other parameters"
 
-    return fixed_param_table
+def get_rows_by_section(param_table, section_name, fixed_params_info):
+    """Get all parameter rows from a specific section"""
+    rows = []
+    for row in param_table:
+        section = get_section_for_param(row["Parameter"], fixed_params_info)
+        if section == section_name:
+            rows.append(row)
+    return rows
 
 def get_row_col_for_subplots(i_panel, n_cols):
     return int(np.floor(i_panel / n_cols)) + 1, i_panel % n_cols + 1
 
-def get_next_run_number(out_path, draws, tune, config_name):
+def get_next_run_number_for_config(out_path, draws, tune, config_name):
     """
     Find the next available run number for a specific number of priors.
     Returns a formatted string like '01', '02', etc.
     """
     pattern = f'calib_full_out_{draws}d{tune}t_{config_name}*.nc'
+    existing_files = list(out_path.glob(pattern))
+    
+    if not existing_files:
+        return '01'
+    
+    numbers = []
+    for f in existing_files:
+        try:
+            run_num = int(f.stem.rsplit('_', 1)[-1])
+            numbers.append(run_num)
+        except ValueError:
+            continue
+
+    next_num = max(numbers) + 1 if numbers else 1
+    return f'{next_num:02d}'
+
+def get_next_run_number(out_path, draws, tune):
+    """
+    Find the next available run number for a specific number of priors.
+    Returns a formatted string like '01', '02', etc.
+    """
+    pattern = f'calib_full_out_{draws}d{tune}t_*.nc'
     existing_files = list(out_path.glob(pattern))
     
     if not existing_files:

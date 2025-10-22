@@ -13,6 +13,154 @@ from tb_incubator.utils import get_row_col_for_subplots
 import re
 from plotly.colors import hex_to_rgb
 
+def plot_detection_scenarios_comparison_box(
+    diff_quantiles: dict,
+    plot_type: str = "abs",
+    log_scale: bool = False,
+    year: int = 2029,
+) -> go.Figure:
+    """
+    Plot the quantile differences for the fixed indicators across multiple scenarios.
+
+    Args:
+        diff_quantiles (dict): The quantile difference data structured as a dictionary.
+        plot_type (str): "abs" for absolute differences, "rel" for relative differences.
+        log_scale (bool): If True, use scatter points instead of bars.
+
+    Returns:
+        fig: A Plotly figure object.
+    """
+    # Fixed indicators
+    indicators = ["cumulative_diseased", "cumulative_deaths"]
+    colors = get_enhanced_color_palettes().get("scientific_rainbow")
+    indicator_colors = {
+        ind: colors[i % len(colors)] for i, ind in enumerate(indicators)
+    }
+
+    fig = go.Figure()
+
+    # Extract all scenario names and reverse their order
+    scenarios = list(
+        reversed(
+            [
+                scenario
+                for scenario in diff_quantiles.keys()
+            ]
+        )
+    )
+
+    # Mapping scenarios to y-axis positions (ensuring only one label per scenario)
+    scenario_positions = {scenario: i for i, scenario in enumerate(scenarios)}
+
+    for i, indicator in enumerate(indicators):
+        color = indicator_colors.get(indicator, "rgba(27,158,119)")
+
+        medians, lower_errors, upper_errors, y_positions = [], [], [], []
+
+        for scenario in scenarios:
+            median_val = -diff_quantiles[scenario][plot_type][indicator].loc[
+                year, 0.500
+            ]
+            lower_val = -diff_quantiles[scenario][plot_type][indicator].loc[
+                year, 0.025
+            ]
+            upper_val = -diff_quantiles[scenario][plot_type][indicator].loc[
+                year, 0.975
+            ]
+            medians.append(median_val)
+            lower_errors.append(median_val - lower_val)
+            upper_errors.append(upper_val - median_val)
+
+            # Adjust y-position for indicator separation within each scenario
+            y_positions.append(scenario_positions[scenario] + (i * 0.2) - 0.1)
+
+        fig.add_trace(
+            go.Bar(
+                x=medians,
+                y=y_positions,
+                orientation="h",
+                marker=dict(color=color),
+                error_x=dict(
+                    type="data",
+                    symmetric=False,
+                    array=upper_errors,
+                    arrayminus=lower_errors,
+                    color="black",
+                    thickness=1,
+                    width=2,
+                ),
+                name=indicator.replace("_", " ").capitalize(),
+            )
+        )
+
+    # Define y-axis labels (only one label per scenario)
+    y_labels = [
+        SCENARIO_NAMES.get(scenario, scenario)
+        for scenario in scenarios
+    ]
+
+    fig.update_layout(
+        title={
+            "text": "Reference: <i>Status-quo</i> scenario",
+            "x": 0.6,
+            "xanchor": "right",
+            "yanchor": "top",
+            "font": {"size": 14}
+        },
+        xaxis=dict(
+            title="% averted" if plot_type == "rel" else "Number averted",
+            type="log" if log_scale else "linear",
+            tickmode="array" if not log_scale else "auto",
+            ticksuffix="%" if plot_type == "rel" else "",  # Add % symbol for relative
+        ),
+        yaxis=dict(
+            tickmode="array",
+            tickvals=list(scenario_positions.values()),  # One label per scenario
+            ticktext=[add_line_breaks(label, max_chars=20, html=True) for label in y_labels],
+            tickangle=0,
+            categoryorder="array",
+            tickfont=dict(size=12, family="Space Grotesk", color="black"),
+        ),
+        height=400,
+        margin=dict(l=50, r=5, t=30, b=10),
+        legend=dict(
+            title="",
+            orientation="h",
+            yanchor="bottom",
+            y=-0.2,
+            xanchor="center",
+            x=0.5,
+            itemsizing="constant",
+            traceorder="normal",
+        ),
+        template="plotly_white",
+        font_family="Space Grotesk",
+        title_font_family="Space Grotesk",
+    )
+    return fig
+
+def apply_legend_config(fig):
+    """
+    Apply consistent legend configuration to a plotly figure
+    
+    Args:
+        fig: plotly figure object
+    
+    Returns:
+        fig: updated plotly figure with legend configuration
+    """
+    fig.update_layout(
+        legend=dict(
+            orientation="v",
+            yanchor="top",
+            y=1.0,
+            xanchor="right",
+            x=0.98,
+            bgcolor='rgba(255,255,255,0.5)'  
+        )
+    )
+    return fig
+
 def plot_indicator_vs_indicator(
     scenario_outputs: Dict[str, Dict[str, pd.DataFrame]],
     indicators: List[str],
@@ -112,14 +260,16 @@ def plot_indicator_vs_indicator(
 
 def overlay_plots(plots, colors=None, 
                  title=None, yaxis_title=None,
-                 update_layout=False):
+                 update_layout=False, show_legend=True,
+                 plot_names=None, legend_position="top-right"):
     if len(plots) < 2:
         raise ValueError("Need at least 2 plots to overlay")
     
     default_colors = [
+        "rgb(27,158,119)",    # Teal
         "rgb(217,95,2)",      # Orange
-        "rgb(27,158,119)",    # Teal  
-        "rgb(255,0,0)",       # Red (fixed - was duplicate orange)
+        "rgb(100, 150, 200)"  # Blue  
+        "rgb(255,0,0)",       # Red 
         "rgb(117,112,179)",   # Purple
         "rgb(231,41,138)",    # Pink
         "rgb(102,166,30)",    # Green
@@ -129,15 +279,52 @@ def overlay_plots(plots, colors=None,
     if colors is None:
         colors = default_colors
     
+    if plot_names is None:
+        plot_names = [f"Plot {i+1}" for i in range(len(plots))]
+    
+    # Define legend positions
+    legend_positions = {
+        "top-right": dict(x=0.98, y=0.98, xanchor="right", yanchor="top"),
+        "top-left": dict(x=0.02, y=0.98, xanchor="left", yanchor="top"),
+        "bottom-right": dict(x=0.98, y=0.025, xanchor="right", yanchor="bottom"),
+        "bottom-left": dict(x=0.02, y=0.025, xanchor="left", yanchor="bottom"),
+        "center": dict(x=0.5, y=0.5, xanchor="center", yanchor="middle")
+    }
+    
     overlay_fig = copy.deepcopy(plots[0])
     
+    # Color the first plot
+    color_0 = colors[0]
+    fill_color_0 = color_0.replace('rgb', 'rgba').replace(')', ',0.2)')
+    
+    for j, trace in enumerate(overlay_fig.data):
+        # Set color for first plot
+        if hasattr(trace, 'line') and trace.line:
+            if hasattr(trace.line, 'width') and trace.line.width and trace.line.width > 0:
+                overlay_fig.data[j].update(line=dict(color=color_0, width=trace.line.width))
+            else:
+                overlay_fig.data[j].update(line=dict(color=color_0, width=0))
+        
+        if hasattr(trace, 'fillcolor'):
+            overlay_fig.data[j].update(fillcolor=fill_color_0)
+        
+        if hasattr(trace, 'marker') and trace.marker:
+            overlay_fig.data[j].update(marker=dict(color=color_0))
+        
+        # Set name for legend (only for visible traces)
+        if hasattr(trace, 'line') and trace.line and hasattr(trace.line, 'width') and trace.line.width and trace.line.width > 0:
+            overlay_fig.data[j].update(name=plot_names[0], showlegend=True)
+        else:
+            overlay_fig.data[j].update(showlegend=False)
+    
+    # Add other plots
     for i, plot in enumerate(plots[1:], 1):
         num_traces_before = len(overlay_fig.data)
         
         for trace in plot.data:
             overlay_fig.add_trace(copy.deepcopy(trace), row=1, col=1)
         
-        color = colors[(i-1) % len(colors)]
+        color = colors[i % len(colors)]
         fill_color = color.replace('rgb', 'rgba').replace(')', ',0.2)')
         
         for j in range(num_traces_before, len(overlay_fig.data)):
@@ -155,16 +342,40 @@ def overlay_plots(plots, colors=None,
             
             if hasattr(trace, 'marker') and trace.marker:
                 overlay_fig.data[j].update(marker=dict(color=color))
+            
+            # Set name for legend (only for visible traces)
+            if hasattr(trace, 'line') and trace.line and hasattr(trace.line, 'width') and trace.line.width and trace.line.width > 0:
+                overlay_fig.data[j].update(name=plot_names[i], showlegend=True)
+            else:
+                overlay_fig.data[j].update(showlegend=False)
     
-        # Apply layout updates if requested
+    # Apply layout updates if requested
     if update_layout:
         layout_updates = {
             'title': title,
             'yaxis_title': f"<b>{add_line_breaks(yaxis_title, max_chars=35).replace('<br>', '<br>')}</b>",
-            'margin': dict(l=20, r=20, t=20, b=20)
+            'margin': dict(l=20, r=20, t=20, b=20),
+            'showlegend': show_legend,
+            'legend': dict(
+                **legend_positions.get(legend_position, legend_positions["top-right"]),
+                bgcolor="rgba(255,255,255,0.8)",
+                bordercolor="rgba(0,0,0,0.2)",
+                borderwidth=1
+            )
         }
             
         overlay_fig.update_layout(**layout_updates)
+    else:
+        # Just update legend visibility and position if not doing full layout update
+        overlay_fig.update_layout(
+            showlegend=show_legend,
+            legend=dict(
+                **legend_positions.get(legend_position, legend_positions["top-right"]),
+                bgcolor="rgba(255,255,255,0.8)",
+                bordercolor="rgba(0,0,0,0.2)",
+                borderwidth=1
+            )
+        )
                 
     return overlay_fig
 
@@ -174,7 +385,9 @@ def get_combined_plot(
     subplot_titles: List[str] = None,
     shared_yaxes: bool = True,
     shared_xaxes: bool = False,
-    showlegend: bool = False,
+    #showlegend: bool = False,
+    vertical_spacing=0.1,
+    horizontal_spacing=0.15,
 ) -> go.Figure:
     
     nrows = int(np.ceil(len(plot_list) / n_cols))
@@ -198,8 +411,8 @@ def get_combined_plot(
         subplot_titles=formatted_titles,  # Use the formatted titles list
         shared_yaxes=shared_yaxes,
         shared_xaxes=shared_xaxes,
-        vertical_spacing=0.1,
-        horizontal_spacing=0.15,
+        vertical_spacing=vertical_spacing,
+        horizontal_spacing=horizontal_spacing,
     )
     
     for annotation in fig['layout']['annotations']:
@@ -211,7 +424,7 @@ def get_combined_plot(
         
         for trace in plot.data:
             fig.add_trace(trace, row=row, col=col)
-        
+                
         # Copy x-axis settings from original plot
         if hasattr(plot.layout, 'xaxis') and plot.layout.xaxis:
             original_xaxis = plot.layout.xaxis
@@ -251,7 +464,7 @@ def get_combined_plot(
         template="plotly_white",
         font_family="Space Grotesk",
         title_font_family="Space Grotesk",
-        showlegend=showlegend,
+        #showlegend=showlegend,
         margin=dict(
             l=20,  # left margin
             r=20,  # right margin
@@ -276,6 +489,9 @@ def plot_scenario_output_ranges(
     palette: str = "scientific_rainbow",
     dash_styles: Optional[Dict[str, str]] = None,
     color_styles: Optional[Dict[str, str]] = None,
+    margin: Optional[Dict[str, int]] = None,
+    vertical_spacing=0.88,
+    horizontal_spacing=0.12
 ) -> go.Figure:
     """
     Plot the credible intervals for each indicator in a single plot across multiple scenarios.
@@ -307,6 +523,8 @@ def plot_scenario_output_ranges(
             if show_title
             else ["" for _ in indicators]
         ), # Conditionally set titles with bold tags
+        vertical_spacing=vertical_spacing,
+        horizontal_spacing=horizontal_spacing
     )
     for annotation in fig['layout']['annotations']:
         annotation['font'] = dict(size=12)  # Set font size for titles
@@ -412,12 +630,26 @@ def plot_scenario_output_ranges(
         if ind == "incidence":
             fig.add_trace(
                 go.Scatter(
-                    x=[2030],
-                    y=[65],
+                    x=[2029],
+                    y=[190],
                     mode="markers",
-                    marker=dict(size=4, color=target_color),
+                    marker=dict(size=5, color=target_color),
                     name="2030 National TB Elimination Target",
-                    showlegend=True if i == 0 else False,  # Show legend only once
+                    showlegend=False if i == 0 else False,  # Show legend only once
+                    legendgroup="Target",
+                ),
+                row=row,
+                col=col,
+            )
+
+            fig.add_trace(
+                go.Scatter(
+                    x=[2035],
+                    y=[33],
+                    mode="markers",
+                    marker=dict(size=5, color="red"),
+                    name="2035 WHO End TB Target",
+                    showlegend=False if i == 0 else False,  # Show legend only once
                     legendgroup="Target",
                 ),
                 row=row,
@@ -427,10 +659,11 @@ def plot_scenario_output_ranges(
         if ind == "mortality":
             fig.add_trace(
                 go.Scatter(
-                    x=[2030],
-                    y=[6],
+                    x=[2035],
+                    y=[2],
                     mode="markers",
-                    marker=dict(size=4, color=target_color),
+                    marker=dict(size=5, color="red"),
+                    name="2035 WHO End TB Target",
                     showlegend=False,  # No additional legend entry for repeated points
                     legendgroup="Target",
                 ),
@@ -462,16 +695,17 @@ def plot_scenario_output_ranges(
         font_family="Space Grotesk",
         title_font_family="Space Grotesk",
         showlegend=showlegend,
-        margin=dict(l=20, r=20, t=20, b=20),  # Dynamic bottom margin
+        margin=dict(l=20, r=20, t=20, b=20) if margin is None else margin,  # Dynamic bottom margin
         legend=dict(
             title="",
             orientation="h",
             yanchor="bottom",
-            y=-0.25,  # Position relative to bottom margin
+            y=-0.5,  # Position relative to bottom margin
             xanchor="center",
             x=0.5,
             font=dict(size=10),
         ),
+
     )
 
     # Update x-axis ticks to increase by 1 year
@@ -832,6 +1066,8 @@ def get_standard_subplot_fig(
     n_cols: int, 
     titles: List[str],
     share_y: bool=False,
+    horizontal_spacing=0.12,
+    vertical_spacing=0.08
 ) -> go.Figure:
     """Start a plotly figure with subplots off from standard formatting.
 
@@ -845,7 +1081,7 @@ def get_standard_subplot_fig(
     """
     heights = [320, 600, 680]
     height = 680 if n_rows > 3 else heights[n_rows - 1]
-    fig = make_subplots(n_rows, n_cols, subplot_titles=titles, vertical_spacing=0.08, horizontal_spacing=0.12, shared_yaxes=share_y)
+    fig = make_subplots(n_rows, n_cols, subplot_titles=titles, vertical_spacing=vertical_spacing, horizontal_spacing=horizontal_spacing, shared_yaxes=share_y)
     return fig.update_layout(margin={i: 25 for i in ['t', 'b', 'l', 'r']}, height=height)
 
 def plot_model_vs_actual(

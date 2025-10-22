@@ -62,11 +62,11 @@ def get_organ_strat(
         strat.add_infectiousness_adjustments(comp, inf_adj)
 
     splitting_proportions = {
-        "smear_positive": fixed_params["incidence_props_pulmonary"]
-        * fixed_params["incidence_props_smear_positive_among_pulmonary"],
-        "smear_negative": fixed_params["incidence_props_pulmonary"]
-        * (1.0 - fixed_params["incidence_props_smear_positive_among_pulmonary"]),
-        "extrapulmonary": 1.0 - fixed_params["incidence_props_pulmonary"],
+        "smear_positive": Parameter("incidence_props_pulmonary")
+        * Parameter("incidence_props_smear_positive_among_pulmonary"),
+        "smear_negative": Parameter("incidence_props_pulmonary")
+        * (1.0 - Parameter("incidence_props_smear_positive_among_pulmonary")),
+        "extrapulmonary": 1.0 - Parameter("incidence_props_pulmonary"),
     }
 
     for flow_name in ["early_activation", "late_activation"]:

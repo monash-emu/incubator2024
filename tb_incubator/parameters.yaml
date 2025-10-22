@@ -1,96 +1,39 @@
-descriptions:
-  start_population_size: "Start population size"
-  age_infectiousness_switch: "Age infectiousness switch"
-  contact_rate: "Contact rate"
-  rr_infection_latent: "Relative risk of reinfection while latently infected (ref. infection-naive)"
-  rr_infection_recovered: "Relative risk of reinfection after recovery (ref. infection-naive)"
-  age_latency:
-    early_activation: "Rate of rapid progression to active TB, based on age groups"
-    late_activation: "Rate of late reactivation, based on age groups"
-    stabilisation: "Rate of stabilization from early to late latency, based on age groups"
-  #progression_multiplier: "TB progression multiplier"
-  seed_time: "Seed time"
-  seed_duration: "Seed duration"
-  seed_rate: "Seed rate"
-  screening_scaleup_shape: "Passive screening shape"
-  screening_inflection_time: "Passive screening inflection time"
-  time_to_screening_end_asymp: "Time from active TB to be screened"
-  base_diagnostic_capacity: "Preceding diagnostic algorithm capacity"
-  genexpert_sensitivity: "GeneXpert sensitivity"
-  detection_reduction: "Detection reduction"
-  post_covid_improvement: "Initial surge in detection post-COVID19"
-  #sustained_improvement: "Sustained increase in detection post-COVID19"
-  smear_positive_infect_multiplier: "Relative infectiousness of smear-positive TB"
-  smear_negative_infect_multiplier: "Relative infectiousness of smear-negative TB"
-  extrapulmonary_infect_multiplier: "Relative infectiousness of extrapulmonary TB"
-  incidence_props_pulmonary: "Proportion of pulmonary TB cases among all TB cases"
-  incidence_props_smear_positive_among_pulmonary: "Proportion of smear-positive TB among all pulmonary TB cases"
-  passive_screening_sensitivity_extrapulmonary: "Screening sensitivity for extrapulmonary TB"
-  passive_screening_sensitivity_smear_negative: "Screening sensitivity for smear-negative TB"
-  passive_screening_sensitivity_smear_positive: "Screening sensitivity for smear-positive TB"
-  smear_positive_death_rate: "Death rate for smear-positive TB"
-  smear_negative_death_rate: "Death rate for smear-negative and extrapulmonary TB"
-  smear_positive_self_recovery: "Self-recovery rate for smear-positive TB"
-  smear_negative_self_recovery: "Self-recovery rate for smear-negative and extrapulmonary TB"
-  initial_notif_rate: "Initial case reporting proportion"
-  latest_notif_rate: "Latest case reporting proportion"
-  acf_sensitivity: "Sensitivity for active case finding (ACF) programme"
-  on_treatment_infect_multiplier: ""
-  prop_death_among_negative_tx_outcome: ""
-  treatment_duration: ""
-  time_variant_tsr: ""
 value:
   start_population_size: 1.0
   age_infectiousness_switch: 15.0
-  contact_rate: 186.386
-  rr_infection_latent: 0.242
-  rr_infection_recovered: 0.77
+  #rr_infection_latent: 0.242
+  #rr_infection_recovered: 0.77
   age_latency:
     early_activation: 
       0: 2.4
       5: 2.0
       15: 0.1
-      35: 0.1
-      50: 0.1
     late_activation: 
       0: 7.0e-09
       5: 2.3e-03
       15: 1.2e-03
-      35: 1.2e-03
-      50: 1.2e-03
     stabilisation: 
       0: 4.4
       5: 4.4
       15: 2.0
-      35: 2.0
-      50: 2.0
-  #progression_multiplier : 1.429615829051863
-  seed_time: 1805.0
-  seed_duration: 1.0
-  seed_rate: 1.0
-  screening_scaleup_shape: 0.10
-  screening_inflection_time: 2002.0
-  time_to_screening_end_asymp: 1.598
-  base_diagnostic_capacity: 0.296
-  genexpert_sensitivity: 0.912
-  detection_reduction: 0.450
-  post_covid_improvement: 1.910
-  #sustained_improvement: 1.572801967999842
+  #seed_time: 1805.0
+  #seed_duration: 1.0
+  #seed_num: 1.0
+  #genexpert_sensitivity: 0.912
+  #detection_reduction: 0.450
   smear_positive_infect_multiplier: 1.0
   smear_negative_infect_multiplier: 0.25
   extrapulmonary_infect_multiplier: 0.
-  incidence_props_pulmonary: 0.95
-  incidence_props_smear_positive_among_pulmonary: 0.85
+  #incidence_props_pulmonary: 0.92
+  #incidence_props_smear_positive_among_pulmonary: 0.85
   passive_screening_sensitivity_extrapulmonary: 0.5
   passive_screening_sensitivity_smear_negative: 0.7
   passive_screening_sensitivity_smear_positive: 1.0
-  smear_positive_death_rate: 0.418
-  smear_negative_death_rate: 0.032
-  smear_positive_self_recovery: 0.257
-  smear_negative_self_recovery: 0.130
-  initial_notif_rate: 0.1
-  latest_notif_rate: 0.8
-  acf_sensitivity: 0.8
+  #smear_positive_death_rate: 0.418
+  #smear_negative_death_rate: 0.032
+  #smear_positive_self_recovery: 0.257
+  #smear_negative_self_recovery: 0.130
+  acf_sensitivity: 0.90
   on_treatment_infect_multiplier: 0.08
   prop_death_among_negative_tx_outcome: 0.03
   treatment_duration: 0.5
@@ -125,7 +68,47 @@ value:
     2020: 0.86
     2021: 0.87
     2022: 0.87
-  
+    
+descriptions:
+  start_population_size: "Start population size"
+  age_infectiousness_switch: "Age-specific reduced susceptibility to infection due to BCG vaccination"
+  contact_rate: "Transmission scaling factor"
+  rr_infection_latent: "Relative risk of reinfection while latently infected (ref. infection-naive)"
+  rr_infection_recovered: "Relative risk of reinfection after recovery (ref. infection-naive)"
+  age_latency: 
+    early_activation: "Rate of rapid progression to active TB, based on age groups (age 0-4/5-14/15+)"
+    late_activation: "Rate of late reactivation, based on age groups (age 0-4/5-14/15+)"
+    stabilisation: "Rate of stabilisation from early to late latency, based on age groups (age 0-4/5-14/15+)"
+  progression_multiplier: "TB progression multiplier"
+  #seed_time: "Seed time"
+  #seed_duration: "Seed duration"
+  #seed_num: "Seed no."
+  screening_scaleup_shape: "Passive screening shape"
+  screening_inflection_time: "Passive screening inflection time"
+  time_to_screening_end_asymp: "Time from active TB to be screened"
+  base_diagnostic_capacity: "Preceding diagnostic algorithm capacity"
+  genexpert_sensitivity: "GeneXpert sensitivity"
+  detection_reduction: "Detection reduction"
+  smear_positive_infect_multiplier: "Relative infectiousness of smear-positive TB"
+  smear_negative_infect_multiplier: "Relative infectiousness of smear-negative TB"
+  extrapulmonary_infect_multiplier: "Relative infectiousness of extrapulmonary TB"
+  incidence_props_pulmonary: "Proportion of pulmonary TB cases among all TB cases"
+  incidence_props_smear_positive_among_pulmonary: "Proportion of smear-positive TB among all pulmonary TB cases"
+  passive_screening_sensitivity_extrapulmonary: "Screening sensitivity for extrapulmonary TB"
+  passive_screening_sensitivity_smear_negative: "Screening sensitivity for smear-negative TB"
+  passive_screening_sensitivity_smear_positive: "Screening sensitivity for smear-positive TB"
+  smear_positive_death_rate: "Death rate for smear-positive TB"
+  smear_negative_death_rate: "Death rate for smear-negative and extrapulmonary TB"
+  smear_positive_self_recovery: "Self-recovery rate for smear-positive TB"
+  smear_negative_self_recovery: "Self-recovery rate for smear-negative and extrapulmonary TB"
+  initial_notif_rate: "Initial case reporting proportion"
+  latest_notif_rate: "Latest case reporting proportion"
+  acf_sensitivity: "Sensitivity for active case finding (ACF) programme"
+  on_treatment_infect_multiplier: "Relative infectiousness during treatment (ref. untreated TB)"
+  prop_death_among_negative_tx_outcome: "Proportion of death among non-successful treatment"
+  treatment_duration: "Treatment duration"
+  time_variant_tsr: "Treatment success rate"
+
 unit:
   start_population_size: "person"
   age_infectiousness_switch: "years old"
@@ -136,18 +119,16 @@ unit:
     early_activation: "per year"
     late_activation: "per year"
     stabilisation: "per year"
-  #progression_multiplier: 
-  seed_time: ""
-  seed_duration: "days"
-  seed_rate: "persons per day"
+  progression_multiplier: 
+  #seed_time: "Year"
+  #seed_duration: "days"
+  #seed_num: "persons per day"
   screening_scaleup_shape: " "
   screening_inflection_time: "Year"
   time_to_screening_end_asymp: "Time (years)"
   base_diagnostic_capacity: ""
   genexpert_sensitivity: ""
   detection_reduction: ""
-  post_covid_improvement: ""
-  #sustained_improvement: ""
   smear_positive_infect_multiplier: ""
   smear_negative_infect_multiplier: ""
   extrapulmonary_infect_multiplier: ""
@@ -169,40 +150,81 @@ unit:
   time_variant_tsr: ""
 
 sources:
-  start_population_size: "A value to avoid dividing by zero in the force of infection calculation"
-  age_infectiousness_switch: "Set based on duration of BCG protection [@nguipdop2016, @roy2019]"
-  contact_rate: "Fitted [@ragonnet2022]"
-  rr_infection_latent:  "Fitted [@andrews2012]"
-  rr_infection_recovered: "Fitted [@andrews2012]"
-  age_latency: "[@ragonnet2017]"
-  #progression_multiplier: "Fitted [@ragonnet2022]"
-  seed_time: "Fitted [@ragonnet2022]"
-  seed_duration: "Fitted [@ragonnet2022]"
-  seed_rate: "Fitted [@ragonnet2022]"
-  screening_scaleup_shape: "Fitted [@ragonnet2022]"
-  screening_inflection_time: "Fitted [@ragonnet2022]"
-  time_to_screening_end_asymp: "Fitted [@ragonnet2022]"
-  base_diagnostic_capacity: "Fitted"
-  genexpert_sensitivity: "Fitted"
-  detection_reduction: "Fitted"
-  post_covid_improvement: "Fitted"
-  #sustained_improvement: "Fitted"
-  smear_positive_infect_multiplier: ""
-  smear_negative_infect_multiplier: ""
-  extrapulmonary_infect_multiplier: ""
-  incidence_props_pulmonary: ""
-  incidence_props_smear_positive_among_pulmonary: ""
-  passive_screening_sensitivity_extrapulmonary: ""
-  passive_screening_sensitivity_smear_negative: ""
-  passive_screening_sensitivity_smear_positive: ""
-  smear_positive_death_rate: ""
-  smear_negative_death_rate: ""
-  smear_positive_self_recovery: ""
-  smear_negative_self_recovery: ""
-  initial_notif_rate: ""
-  latest_notif_rate: ""
-  acf_sensitivity: "Fitted"
-  on_treatment_infect_multiplier: ""
-  prop_death_among_negative_tx_outcome: ""
-  treatment_duration: ""
-  time_variant_tsr: ""
+  start_population_size: "Arbitrary value, as it serves only to scale the force of infection calculation and does not affect the relative disease dynamics."
+  age_infectiousness_switch: "Set based on the assumption of 70% reduced susceptibility for children under 15 years old due to BCG protection [@nguipdop2016, @roy2019]"
+  contact_rate: "Assumed"
+  rr_infection_latent:  "[@behr1999]"
+  rr_infection_recovered: "[@andrews2012]"
+  age_latency: 
+    early_activation: "[@ragonnet2017]"
+    late_activation: "[@ragonnet2017]"
+    stabilisation: "[@ragonnet2017]"
+  progression_multiplier: "Assumed, following previous study[@ragonnet2022]"
+  #seed_time: "Fitted [@ragonnet2022]"
+  #seed_duration: "Fitted [@ragonnet2022]"
+  #seed_num: "Fitted [@ragonnet2022]"
+  screening_scaleup_shape: "Assumed[@ragonnet2022]"
+  screening_inflection_time: "Assumed based on the implementation of key programmatic interventions[@bui2025, @ragonnet2022]"
+  time_to_screening_end_asymp: "Assumed[@bui2025, @ragonnet2022]"
+  base_diagnostic_capacity: "Assumed"
+  genexpert_sensitivity: "Assumed[@karuniawati2023]"
+  detection_reduction: "Assumed"
+  smear_positive_infect_multiplier: "[@behr1999, @tostmann2008]"
+  smear_negative_infect_multiplier: "[@behr1999, @tostmann2008]"
+  extrapulmonary_infect_multiplier: "[@behr1999, @tostmann2008]"
+  incidence_props_pulmonary: "Assumed based on WHO data[@whotb2023]"
+  incidence_props_smear_positive_among_pulmonary: "Assumed based on WHO data[@whotb2023]"
+  passive_screening_sensitivity_extrapulmonary: "Assumed, following previous study[@ragonnet2020]"
+  passive_screening_sensitivity_smear_negative: "Assumed, following previous study[@ragonnet2020]"
+  passive_screening_sensitivity_smear_positive: "Assumed, following previous study[@ragonnet2020]"
+  smear_positive_death_rate: "Median posterior estimates of mean TB-specific mortality rate[@ragonnet2020]"
+  smear_negative_death_rate: "Median posterior estimates of mean TB-specific mortality rate[@ragonnet2020]"
+  smear_positive_self_recovery: "Mean estimates of the self-recovery rate[@ragonnet2020]"
+  smear_negative_self_recovery: "Mean estimates of the self-recovery rate[@ragonnet2020]"
+  initial_notif_rate: "The second national TB inventory study[@who2023-inv]"
+  latest_notif_rate: "The second national TB inventory study[@who2023-inv]"
+  acf_sensitivity: "Assumed"
+  on_treatment_infect_multiplier: "Assumed to be infectious during the first 2 weeks of the 6-month treatment regimen[@ragonnet2017]"
+  prop_death_among_negative_tx_outcome: "Estimated proportion of deaths among unsuccessful treatment outcomes, averaged over the last decade[@whotb2023]"
+  treatment_duration: "Assumed[@moh2025clin]"
+  time_variant_tsr: "Ministry of Health, Republic of Indonesia[@moh2024]"
+
+group:
+  start_population_size: "Demographics"
+  age_infectiousness_switch: "TB transmission and disease natural history"
+  contact_rate: "TB transmission and disease natural history"
+  rr_infection_latent:  "TB transmission and disease natural history"
+  rr_infection_recovered: "TB transmission and disease natural history"
+  age_latency: 
+    early_activation: "TB transmission and disease natural history"
+    late_activation: "TB transmission and disease natural history"
+    stabilisation: "TB transmission and disease natural history"
+  progression_multiplier: "TB transmission and disease natural history"
+  #seed_time: ""
+  #seed_duration: ""
+  #seed_num: ""
+  screening_scaleup_shape: "TB control (detection and treatment)"
+  screening_inflection_time: "TB control (detection and treatment)"
+  time_to_screening_end_asymp: "TB control (detection and treatment)"
+  base_diagnostic_capacity: "TB control (detection and treatment)"
+  genexpert_sensitivity: "TB control (detection and treatment)"
+  detection_reduction: "TB control (detection and treatment)"
+  smear_positive_infect_multiplier: "TB transmission and disease natural history"
+  smear_negative_infect_multiplier: "TB transmission and disease natural history"
+  extrapulmonary_infect_multiplier: "TB transmission and disease natural history"
+  incidence_props_pulmonary: "TB transmission and disease natural history"
+  incidence_props_smear_positive_among_pulmonary: "TB transmission and disease natural history"
+  passive_screening_sensitivity_extrapulmonary: "TB control (detection and treatment)"
+  passive_screening_sensitivity_smear_negative: "TB control (detection and treatment)"
+  passive_screening_sensitivity_smear_positive: "TB control (detection and treatment)"
+  smear_positive_death_rate: "TB transmission and disease natural history"
+  smear_negative_death_rate: "TB transmission and disease natural history"
+  smear_positive_self_recovery: "TB transmission and disease natural history"
+  smear_negative_self_recovery: "TB transmission and disease natural history"
+  initial_notif_rate: "TB control (detection and treatment)"
+  latest_notif_rate: "TB control (detection and treatment)"
+  acf_sensitivity: "TB control (detection and treatment)"
+  on_treatment_infect_multiplier: "TB transmission and disease natural history"
+  prop_death_among_negative_tx_outcome: "TB control (detection and treatment)"
+  treatment_duration: "TB control (detection and treatment)"
+  time_variant_tsr: "TB control (detection and treatment)"

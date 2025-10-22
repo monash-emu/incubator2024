@@ -1,43 +1,34 @@
-from typing import Dict
+from typing import Optional
 from summer2.parameters import Parameter, Time, Function
 from summer2.functions.time import get_sigmoidal_interpolation_function, get_linear_interpolation_function, get_time_callable
 from .input import load_genexpert_util
 from .utils import tanh_based_scaleup
+from .constants import ImplementCDR
+
 
 def get_detection_func(
+    covid_effects: bool = True,
+    apply_diagnostic_capacity: bool = True,
     xpert_improvement: bool = True,
-    covid_effects: Dict[str, bool] = None,
-    xpert_util_target: float = None,
-    improved_detection_multiplier: float = None,
-    apply_cdr_within_model: bool = False,
+    apply_cdr: ImplementCDR = ImplementCDR.NONE,
+    improved_detection_multiplier: Optional[float] = None,
+    xpert_util_target: Optional[float] = None,
 ) -> Function:
     """
-    Creates a time-variant TB detection function that combines multiple factors affecting case detection.
-    
-    This function constructs a model of TB case detection rates over time by combining:
-    1. A baseline detection function 
-    2. Diagnostic capacity improvements by increase of Xpert utilisation
-    3. Impacts from COVID-19 (optional)
-    4. Projected future improvements in detection capabilities (optional)
+    Create TB detection function with all available improvements.
     
     Args:
-        xpert_improvement (bool, optional): Whether to include Xpert improvement. Defaults to True.
-        covid_effects (Dict[str, bool], optional): Dictionary specifying which COVID-19 
-            effects to include. Currently only supports "detection_reduction". 
-            Defaults to {"detection_reduction": False}.
-        xpert_util_target (float, optional): Target Xpert utilisation rate to reach by 2030,
-            value is between 0 and 1. Only used when xpert_improvement=True.
-        improved_detection_multiplier (float, optional): Factor to scale up detection 
-            capability between 2025-2030 for scenario projection. If None, no future improvement is modelled.
+        covid_effects: Whether to apply COVID-19 impact on detection
+        improved_detection_multiplier: Future detection improvement multiplier by 2027
+        apply_diagnostic_capacity: Whether to apply diagnostic capacity scaling
+        xpert_improvement: Whether to apply Xpert utilization improvements (requires apply_diagnostic_capacity=True)
+        apply_cdr: Case detection rate implementation strategy
+        xpert_util_target: Target Xpert utilization rate for 2027 (0-1)
     
     Returns:
-        Tuple containing:
-            - detection_func (Function): The final combined detection function over time
-            - base_detection (Function): The baseline detection function
-            - diagnostic_capacity (Function): The total diagnostic capacity function
-            - diagnostic_improvement (Function): The improvement in diagnostic capacity
-    
+        Complete detection function with all specified improvements
     """
+    # Create base detection function
     detection_func = Function(
         tanh_based_scaleup,
         [
@@ -48,140 +39,107 @@ def get_detection_func(
             1.0 / Parameter("time_to_screening_end_asymp")
         ]
     )
-    base_detection = detection_func
 
-    ## xpert improvement
-    diagnostic_capacity = Parameter("base_diagnostic_capacity") #Function(lambda: 1.0)
-
-    if xpert_improvement:
-        diagnostic_improvement = calculate_xpert_util_improvement(xpert_util_target)
-    else:
-        diagnostic_improvement = Function(lambda: 0.0)
-        
-    diagnostic_capacity += diagnostic_improvement
-    detection_func *= diagnostic_capacity
-
-    if covid_effects["detection_reduction"]:
+    # Apply COVID effects
+    if covid_effects:
         detection_func = apply_covid_effects(detection_func)
 
+    # Validate parameter combinations
+    if xpert_improvement and not apply_diagnostic_capacity:
+        raise ValueError("xpert_improvement=True requires apply_diagnostic_capacity=True")
+
+    # Apply future detection improvements
     if improved_detection_multiplier is not None:
-        assert isinstance(improved_detection_multiplier, float) and improved_detection_multiplier > 0.0, "improved_detection_multiplier must be a positive float."
+        _validate_positive_number(improved_detection_multiplier, "improved_detection_multiplier")
         detection_func = apply_future_detection_improvement(detection_func, improved_detection_multiplier)
+
+    # Apply diagnostic capacity improvements
+    if apply_diagnostic_capacity:
+        diagnostic_capacity = Parameter("base_diagnostic_capacity")
+        
+        if xpert_improvement: 
+            diagnostic_improvement = calculate_xpert_util_improvement(xpert_util_target=xpert_util_target)  
+            diagnostic_capacity += diagnostic_improvement
+            
+        detection_func *= diagnostic_capacity  
     
-    if apply_cdr_within_model:
+    # Apply case detection rate improvements
+    if apply_cdr == ImplementCDR.ON_DETECTION:  
         national_cdr = get_linear_interpolation_function(
             [2017.0, 2023.0],
             [Parameter("initial_notif_rate"), Parameter("latest_notif_rate")]
         )
         detection_func *= national_cdr
 
-    return detection_func, base_detection, diagnostic_capacity, diagnostic_improvement
+    return detection_func
 
 
-def apply_future_detection_improvement(
-    detection_func: Function, 
-    improved_detection_multiplier: float
-) -> Function:
-    """
-    Applies a projected future improvement to a detection function over time.
-    
-    Args:
-        detection_func (Function): The base detection function to be scaled
-        improved_detection_multiplier (float): Target multiplier to reach by 2030.
-            For example, 1.5 would mean a 50% improvement in detection by 2030.
-            Must be a positive float.
-    
-    Returns:
-        Function: A new detection function that incorporates the projected future improvements
-    """
-    detection_improvement_vals = {
-        2025.0: 1.0,
-        2030.0: improved_detection_multiplier
-    }
+def apply_future_detection_improvement(detection_func: Function, multiplier: float) -> Function:
+    """Apply projected future improvement to detection function."""
     improve_detection_func = get_linear_interpolation_function(
-        list(detection_improvement_vals.keys()),
-        list(detection_improvement_vals.values())
+        [2025.0, 2027.0],
+        [1.0, multiplier]
     )
-
     return detection_func * improve_detection_func
 
-def calculate_xpert_util_improvement(
-    xpert_util_target: float = None,
-) -> Function:
-    """
-    Calculates the improvement in diagnostic capacity due to increase in Xpert utilisation.
-    
-    Args:
-        xpert_util_target (float, optional): Target Xpert utilisation rate to reach by 2030,
-            value is between 0 and 1. Used in scenario projection. Only used when xpert_improvement=True.
-    
-    Returns:
-        Function: A time-dependent function representing the improvement in diagnostic
-            capacity due to increase in Xpert utilisation over time.
-    """
+
+def calculate_xpert_util_improvement(xpert_util_target: Optional[float] = None) -> Function:
+    """Calculate improvement in diagnostic capacity due to Xpert utilisation increase."""
     utilisation = load_genexpert_util()
     genexpert_util = get_sigmoidal_interpolation_function(utilisation.index, utilisation)
-    diagnostic_improvement = (1.0 - Parameter("base_diagnostic_capacity")) * Parameter("genexpert_sensitivity") * genexpert_util
+    
+    diagnostic_improvement = (
+        (1.0 - Parameter("base_diagnostic_capacity")) * 
+        Parameter("genexpert_sensitivity") * 
+        genexpert_util
+    )
         
-    # Apply xpert_util_target only when xpert_improvement is True
     if xpert_util_target is not None:
-        assert isinstance(xpert_util_target, float) and xpert_util_target > 0 and xpert_util_target <=1.0, "xpert_util_target must be a float between 0 and 1."
-        diagnostic_improvement = apply_future_xpert_improvement(genexpert_util, diagnostic_improvement, xpert_util_target)
+        _validate_utilization_rate(xpert_util_target)
+        diagnostic_improvement = apply_future_xpert_improvement(
+            genexpert_util, diagnostic_improvement, xpert_util_target
+        )
         
     return diagnostic_improvement
+
 
 def apply_future_xpert_improvement(
     genexpert_util: Function, 
     diagnostic_improvement: Function,
     xpert_util_target: float, 
 ) -> Function:
-    """
-    Applies a projected Xpert utilisation target to scale up the diagnostic improvement.
-    
-    Args:
-        genexpert_util (Function): The current Xpert utilisation function over time
-        diagnostic_improvement (Function): The base diagnostic improvement function to scale
-        xpert_util_target (float): Target utilisation rate to reach by 2030 (between 0 and 1)
-    
-    Returns:
-        Function: Scaled diagnostic improvement function incorporating the projected utilisation increase
-    
-    """
+    """Scale diagnostic improvement based on projected Xpert utilisation target."""
     xpert_util_callable = get_time_callable(genexpert_util)
     current_util = float(xpert_util_callable(2025.0))
             
-    # Create scaling function that goes from current to target utilization
-    if xpert_util_target > current_util:  # Only scale up if target is higher
+    # Only scale up if target is higher than current utilization
+    if xpert_util_target > current_util:
+        scale_factor = xpert_util_target / current_util
         util_scale_factor = get_linear_interpolation_function(
-            [2025.0, 2030.0], 
-            [1.0, xpert_util_target / current_util]
+            [2025.0, 2027.0], 
+            [1.0, scale_factor]
         )
         diagnostic_improvement *= util_scale_factor
         
     return diagnostic_improvement
 
-def apply_covid_effects(
-    detection_func: Function,
-) -> Function:
-    """
-    Applies the impact of the COVID-19 pandemic on TB case detection.
-    
-    Args:
-        detection_func (Function): The base TB detection function to be modified
-    
-    Returns:
-        Function: A modified detection function incorporating COVID-19 impacts
-    """
-    covid_impact_vals = {
-        2019.0: 1.0,
-        2020.0: 1.0 - Parameter("detection_reduction"),
-        2022.0: 1.0
-    }
 
+def apply_covid_effects(detection_func: Function) -> Function:
+    """Apply COVID-19 pandemic impact on TB case detection."""
     covid_impact_func = get_linear_interpolation_function(
-        list(covid_impact_vals.keys()),
-        list(covid_impact_vals.values())
+        [2019.0, 2020.0, 2021.0],
+        [1.0, 1.0 - Parameter("detection_reduction"), 1.0]
     )
-
     return detection_func * covid_impact_func
 
+
+def _validate_positive_number(value: float, name: str) -> None:
+    """Validate that a value is a positive number."""
+    if not isinstance(value, (int, float)) or value <= 0:
+        raise ValueError(f"{name} must be a positive number, got {value}")
+
+
+def _validate_utilization_rate(value: float) -> None:
+    """Validate that utilization rate is between 0 and 1."""
+    if not isinstance(value, (int, float)) or not (0 < value <= 1):
+        raise ValueError(f"Utilization rate must be between 0 and 1, got {value}")
