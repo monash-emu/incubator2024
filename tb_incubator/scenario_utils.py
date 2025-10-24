@@ -4,7 +4,7 @@ from typing import List, Dict, Any
 import xarray as xr
 from pathlib import Path
 
-from .constants import QUANTILES, ImplementCDR, set_project_base_path
+from .constants import QUANTILES, ImplementCDR, set_project_base_path, BURN_IN
 from .calibrate import get_bcm
 from .utils import create_periodic_time_series
 from estival.sampling import tools as esamp
@@ -720,9 +720,21 @@ def load_idata(out_path: str, scenario_configs: Dict) -> dict:
             print(f"File {calib_file} does not exist.")
     return inference_data_dict
 
-def extract_and_save_idata(idata_dict: Dict, output_dir: str, num_samples: int = 1000) -> None:
-    for config_name, burnt_idata in idata_dict.items():
+def extract_and_save_idata(idata_dict: Dict, output_dir: str, burn_in: int = 2500, num_samples: int = 1000) -> None:
+    """
+    Extract and save inference data for each scenario configuration.
+
+    Args:
+        idata_dict (dict): Dictionary mapping configuration names to InferenceData objects.
+        output_dir (str): Directory to save the extracted inference data.
+        num_samples (int, optional): Number of samples to extract. Defaults to 1000.
+
+    Returns:
+        None
+    """
+    for config_name, idata in idata_dict.items():
         # Extract samples (you might adjust the number of samples as needed)
+        burnt_idata = idata.sel(draw=np.s_[burn_in:])
         idata_extract = az.extract(burnt_idata, num_samples=num_samples)
 
         # Convert extracted data into InferenceData object
@@ -751,6 +763,51 @@ def convert_ll_to_idata(ll_res):
 
     return idata
 
+def convert_ll_to_idata_pointwise(ll_res):
+    """
+    Convert likelihood DataFrame to InferenceData with POINTWISE log-likelihoods
+    Handles both MultiIndex (chain, draw) and single Index (sample)
+    """
+    # Extract the TWO separate log-likelihoods
+    ll_prev = ll_res['ll_adults_prevalence_pulmonary_log'].values
+    ll_notif = ll_res['ll_notification_log'].values
+    
+    # Stack them as separate observations
+    pointwise_ll = np.column_stack([ll_prev, ll_notif])
+    
+    # Check if it's a MultiIndex or single index
+    if isinstance(ll_res.index, pd.MultiIndex):
+        # Has chain/draw structure
+        chains = ll_res.index.get_level_values('chain').unique()
+        draws = ll_res.index.get_level_values('draw').unique()
+        n_chains = len(chains)
+        n_draws = len(draws)
+        print(f"MultiIndex: Chains: {n_chains}, Draws: {n_draws}")
+        
+        # Reshape to (n_chains, n_draws, 2)
+        pointwise_ll_reshaped = pointwise_ll.reshape(n_chains, n_draws, 2)
+    else:
+        # Single index (from extracted samples)
+        n_samples = len(ll_res)
+        print(f"Single index: {n_samples} samples (no chain structure)")
+        
+        # Treat as single chain
+        # Reshape to (1_chain, n_samples, 2)
+        pointwise_ll_reshaped = pointwise_ll.reshape(1, n_samples, 2)
+    
+    # Create InferenceData
+    idata = az.from_dict(
+        log_likelihood={
+            "obs": pointwise_ll_reshaped
+        },
+        posterior={
+            "logposterior": ll_res['logposterior'].values.reshape(pointwise_ll_reshaped.shape[0], pointwise_ll_reshaped.shape[1])
+        }
+    )
+    
+    return idata
+
+
 def load_extracted_idata(out_path: str, scenario_configs: Dict) -> Dict:
     inference_data_dict = {}
     for config_name in scenario_configs.keys():
@@ -771,7 +828,7 @@ def calculate_loo_comparison(assump_outputs):
         ll_res = output["ll_res"]
 
         # Convert ll_res to InferenceData
-        idata = convert_ll_to_idata(ll_res)
+        idata = convert_ll_to_idata_pointwise(ll_res)
 
         # Store InferenceData in the dictionary for LOO comparison
         loo_dict[name] = idata
@@ -796,7 +853,7 @@ def calculate_waic_comparison(assump_outputs):
         ll_res = output["ll_res"]
 
         # Convert ll_res to InferenceData
-        idata = convert_ll_to_idata(ll_res)
+        idata = convert_ll_to_idata_pointwise(ll_res)
 
         # Store InferenceData in the dictionary for WAIC comparison
         waic_dict[name] = idata

@@ -35,7 +35,7 @@ value:
   #smear_negative_self_recovery: 0.130
   acf_sensitivity: 0.90
   on_treatment_infect_multiplier: 0.08
-  prop_death_among_negative_tx_outcome: 0.03
+  prop_death_among_negative_tx_outcome: 0.2
   treatment_duration: 0.5
   time_variant_tsr:
     1970: 0.10

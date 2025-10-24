@@ -257,4 +257,4 @@ data_path = project_paths["DATA_PATH"]
 image_path = project_paths["IMAGE_PATH"]
 out_path = project_paths["OUT_PATH"]
 
-BURN_IN = 10000
+BURN_IN = 2500

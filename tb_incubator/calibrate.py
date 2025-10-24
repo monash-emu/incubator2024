@@ -92,7 +92,7 @@ def get_all_priors(covid_effects: bool = True,
         esp.TruncNormalPrior("smear_positive_self_recovery", 0.232, 0.02, (0.177, 0.288)),
         esp.TruncNormalPrior("smear_negative_self_recovery", 0.139, 0.02, (0.07, 0.209)),
         esp.UniformPrior("screening_scaleup_shape", (0.04, 0.3)), 
-        esp.UniformPrior("screening_inflection_time", (2005.0, 2017.0)),
+        esp.UniformPrior("screening_inflection_time", (2004.0, 2017.0)),
         #esp.TruncNormalPrior("screening_inflection_time", 2005.0, 3.5, (1995.0, 2010.0)),
         esp.UniformPrior("time_to_screening_end_asymp", (0.40, 2.5)),
         #esp.UniformPrior("notif_start_time", (1960.0, 1990.0)),
@@ -104,7 +104,7 @@ def get_all_priors(covid_effects: bool = True,
         priors.append(esp.UniformPrior("base_diagnostic_capacity", (0.1, 0.90)))
     if apply_cdr == ImplementCDR.ON_DETECTION or apply_cdr == ImplementCDR.ON_NOTIFICATION:
         priors.append(esp.UniformPrior("initial_notif_rate", (0.1, 0.70)))
-        priors.append(esp.UniformPrior("latest_notif_rate", (0.6, 0.90)))
+        priors.append(esp.UniformPrior("latest_notif_rate", (0.5, 0.90)))
     if xpert_improvement:
         priors.append(esp.BetaPrior.from_mean_and_ci("genexpert_sensitivity", 0.90, (0.80, 0.99)))
     if covid_effects:
